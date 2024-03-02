@@ -2,7 +2,6 @@ package kobjs
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 )
@@ -102,7 +101,7 @@ func objToBeautifulJson5(obj any, level int) string {
 	// }
 
 	val := reflect.ValueOf(obj)
-	log.Printf("  %#v\n", val)
+	// log.Printf("  %#v\n", val)
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
 	}
@@ -121,7 +120,7 @@ func objToBeautifulJson5(obj any, level int) string {
 		for i := 0; i < fieldNums; i++ {
 			field := val.Field(i)
 			fieldName := val.Type().Field(i).Name
-			log.Printf("%s\n", fieldName)
+			// log.Printf("%s\n", fieldName)
 			// 判断字段的首字母是否是大写
 			if !fieldPublic(fieldName) {
 				continue
