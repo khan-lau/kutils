@@ -1,4 +1,4 @@
-module khan.private/khan/kutil
+module khan/kutil
 
 go 1.20
 
