@@ -41,9 +41,9 @@ func NewKRedis(ctx context.Context, host string, port int, user string, password
 		OnConnect:       redisOnConnect,
 	})
 
-	selfCtx, cancel := context.WithCancel(ctx)
+	subCtx, subCancel := context.WithCancel(ctx)
 
-	return &KRedis{Client: client, ctx: selfCtx, cancel: cancel}
+	return &KRedis{Client: client, ctx: subCtx, cancel: subCancel}
 }
 
 // 判断某个key是否存在
@@ -123,7 +123,7 @@ func (mr *KRedis) Ping() bool {
 	return nil == err
 }
 
-func (mr *KRedis) Scan(limit int, aboutTypes []string, ignoreKeys []string, needDel bool, logger *logger.Logger) ([]*RedisRecord, error) {
+func (mr *KRedis) Scan(limit int, aboutTypes []string, ignoreKeys []string, includeKeys []string, needDel bool, logf logger.AppLogFunc) ([]*RedisRecord, error) {
 	cursor := uint64(0)
 	allKeys := make([]string, 0, 50000)
 
@@ -139,7 +139,7 @@ func (mr *KRedis) Scan(limit int, aboutTypes []string, ignoreKeys []string, need
 		}
 
 		count += len(keys)
-		// logger.Debug("scan %d keys, limit: %d, cursor: %d", count, limit, cursor)
+		// logf(logger.DebugLevel,"scan %d keys, limit: %d, cursor: %d", count, limit, cursor)
 		allKeys = append(allKeys, keys...)
 		if cursor == 0 {
 			// 扫描完成
@@ -149,19 +149,28 @@ func (mr *KRedis) Scan(limit int, aboutTypes []string, ignoreKeys []string, need
 	//index := int64(0)
 
 	// runtime.ReadMemStats(&m)
-	// logger.Debug("%+v, os %d\n", m, m.Sys)
+	// logf(logger.DebugLevel,"%+v, os %d\n", m, m.Sys)
 
 	dataList := make([]*RedisRecord, 0, limit)
 	for _, key := range allKeys {
+		// 黑名单过滤
 		if kslices.Contains(ignoreKeys, key) { //过滤掉不需要的key
 			continue
 		}
+
+		// 如果有白名单, 则启用白名单规则, 不在白名单的被过滤掉, 白名单优先级低于黑名单
+		if len(includeKeys) > 0 {
+			if !kslices.Contains[string](includeKeys, key) {
+				continue
+			}
+		}
+
 		dataType, err := mr.Type(key)
 		if nil != err {
 			return nil, err
 		}
 
-		//logger.Debug("idx: %d, key:%s, type:%s", idx, key, dataType)
+		//logf(logger.DebugLevel,"idx: %d, key:%s, type:%s", idx, key, dataType)
 		if !kslices.Contains(aboutTypes, strings.ToLower(dataType)) { //过滤出需要的数据类型
 			continue
 		}
@@ -175,20 +184,20 @@ func (mr *KRedis) Scan(limit int, aboutTypes []string, ignoreKeys []string, need
 		if nil != err {
 			return nil, err
 		}
-		// logger.Debug("key:%s, type:%s, ttl:%d", key, dataType, ttl)
+		// logf(logger.DebugLevel,"key:%s, type:%s, ttl:%d", key, dataType, ttl)
 		//index++ //golang中 `++` 与 `--` 运算符只能作为语句存在, 不能作为表达式, 个小垃圾
 		dataList = append(dataList, &RedisRecord{Key: key, PTtl: ttl, DataType: dataType, Data: data})
 	}
 
 	// runtime.ReadMemStats(&m)
-	// logger.Debug("%+v, os %d\n", m, m.Sys)
+	// logf(logger.DebugLevel,"%+v, os %d\n", m, m.Sys)
 
 	return dataList, nil
 }
 
 // 向指定topic发布消息
-func (mr *KRedis) Publish(topic string, payload interface{}) *redisHd.IntCmd {
-	return mr.Client.Publish(mr.ctx, topic, payload)
+func (mr *KRedis) Publish(topic string, payload interface{}) error {
+	return mr.Client.Publish(mr.ctx, topic, payload).Err()
 }
 
 // 从指定topic订阅消息, 底层API, 最好使用Subscribe替代
