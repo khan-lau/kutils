@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	kslices "khan.private/khan/kutil/container/kslices"
-	"khan.private/khan/kutil/logger"
+	kslices "khan/kutil/container/kslices"
+	"khan/kutil/logger"
 
 	redisHd "github.com/redis/go-redis/v9"
 )

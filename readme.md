@@ -10,6 +10,31 @@
 4. kslices slice的补充工具库
 5. kmaps map的补充工具库
 
+```go
+// StringFormatter 范例
+func Test_StringFormatter(t *testing.T) {
+	log.Printf("%s \n", kstrings.FormatArgs("Set {} is not equal to {}.", 1, 2).Message())
+
+	log.Println(kstrings.ArrayFormat("{\"user\":\"{}\", \"token\":\"{}\"}", []any{"test", "test001"}).Message())
+
+	log.Println(kstrings.SliceFormat("{\"code\":{},  \"user\":\"{}\", \"token\":\"{}\"}", 0, "test", "test001").Message())
+
+	log.Println(kstrings.SliceFormat("int:{}, double:{}, bool:{}, string:{}, array[int]:{}, array[bool]:{}",
+		0, 0.1, false, "test001", []any{1, 2, 3}, []any{false, true, true}).Message())
+
+	log.Println(kstrings.FormatString("int:{}, double:{}, bool:{}, string:{}, array[int]:{}, array[bool]:{}",
+		0, 0.1, false, "test001", []any{1, 2, 3}, []any{false, true, true}))
+
+	mapTmp := make(map[string]int, 5)
+	mapTmp["1"] = 1
+	mapTmp["2"] = 2
+	log.Println(kstrings.FormatString("map[string]int : {}", mapTmp))
+
+	kstrings.Println("int:{}, double:{}, bool:{}, string:{}, array[int]:{}, array[bool]:{}",
+		0, 0.1, false, "test001", []any{1, 2, 3}, []any{false, true, true})
+}
+```
+
 ## data
 1. gzip deflate br 的压缩与解压
 2. Generator 自增原子数
