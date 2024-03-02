@@ -10,7 +10,7 @@ import (
 	// "github.com/google/brotli/go/cbrotli"
 	"github.com/andybalholm/brotli"
 
-	"khan-lau/kutil/katomic"
+	"github.com/khan-lau/kutils/katomic"
 )
 
 ////////////////////////////////////////////////////////////////

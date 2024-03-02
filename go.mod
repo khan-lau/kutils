@@ -1,4 +1,4 @@
-module khan-lau/kutil
+module github.com/khan-lau/kutils
 
 go 1.20
 
