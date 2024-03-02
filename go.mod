@@ -3,6 +3,7 @@ module khan.private/khan/kutil
 go 1.20
 
 require (
+	github.com/andybalholm/brotli v1.1.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
 	github.com/redis/go-redis/v9 v9.3.0
 	go.uber.org/zap v1.26.0
