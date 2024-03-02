@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"khan/kutil/container/klists"
-	"khan/kutil/container/kmaps"
-	"khan/kutil/data"
+	"khan-lau/kutil/container/klists"
+	"khan-lau/kutil/container/kmaps"
+	"khan-lau/kutil/data"
 )
 
 var seqGen data.Generator = *data.NewGenerator(1)

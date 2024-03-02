@@ -4,7 +4,7 @@ package datetime
 import (
 	Time "time"
 
-	"khan/kutil/container/klists"
+	"khan-lau/kutil/container/klists"
 )
 
 type Duration int64

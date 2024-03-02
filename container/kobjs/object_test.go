@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"khan/kutil/container/kstrings"
-	"khan/kutil/katomic"
+	"khan-lau/kutil/container/kstrings"
+	"khan-lau/kutil/katomic"
 )
 
 func Test_StringFormatter(t *testing.T) {

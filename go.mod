@@ -1,4 +1,4 @@
-module khan/kutil
+module khan-lau/kutil
 
 go 1.20
 
