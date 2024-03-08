@@ -230,20 +230,37 @@ func deeplyAppendParameter(sbuf *strings.Builder, o any, seenMap map[any]any) {
 			byteArrayAppend(sbuf, o)
 		case []rune:
 			charArrayAppend(sbuf, o)
+		case []int8:
+			int8ArrayAppend(sbuf, o)
 		case []int16:
 			shortArrayAppend(sbuf, o)
 		case []int:
 			intArrayAppend(sbuf, o)
+		// case []int32:
+		// 	int32ArrayAppend(sbuf, o)
 		case []int64:
 			longArrayAppend(sbuf, o)
+		case []uint16:
+			uint16ArrayAppend(sbuf, o)
+		case []uint:
+			uintArrayAppend(sbuf, o)
+		case []uint32:
+			uint32ArrayAppend(sbuf, o)
+		case []uint64:
+			uint64ArrayAppend(sbuf, o)
 		case []float32:
 			floatArrayAppend(sbuf, o)
 		case []float64:
 			doubleArrayAppend(sbuf, o)
+		case []complex64:
+			complex64ArrayAppend(sbuf, o)
+		case []complex128:
+			complex128ArrayAppend(sbuf, o)
 		case []string:
 			stringArrayAppend(sbuf, o)
 		default:
-			objectArrayAppend(sbuf, o.([]any), seenMap)
+			// objectArrayAppend(sbuf, o.([]any), seenMap)
+			objectArrayAppend(sbuf, o, seenMap)
 		}
 	} else {
 		safeObjectAppend(sbuf, o)
@@ -260,29 +277,47 @@ func safeObjectAppend(sbuf *strings.Builder, o any) {
 		}
 	}()
 
-	oAsString := fmt.Sprintf("%v", o)
+	oAsString := fmt.Sprintf("%#v", o)
 	sbuf.WriteString(oAsString)
 }
 
-func objectArrayAppend(sbuf *strings.Builder, a []any, seenMap map[any]any) {
+func objectArrayAppend(sbuf *strings.Builder, a any, seenMap map[any]any) {
 	sbuf.WriteRune('[')
 	key := fmt.Sprintf("%p", a)
+	val := reflect.ValueOf(a)
 	if _, ok := seenMap[key]; !ok {
-		seenMap[key] = nil
-		len := len(a)
-		for i := 0; i < len; i++ {
-			deeplyAppendParameter(sbuf, a[i], seenMap)
-			if i != len-1 {
+		length := val.Len()
+		for j := 0; j < length; j++ {
+			deeplyAppendParameter(sbuf, val.Index(j), seenMap)
+			if j != length-1 {
 				sbuf.WriteString(", ")
 			}
 		}
-		// allow repeats in siblings
-		delete(seenMap, key)
 	} else {
 		sbuf.WriteString("...")
 	}
 	sbuf.WriteRune(']')
 }
+
+// func objectArrayAppend(sbuf *strings.Builder, a []any, seenMap map[any]any) {
+// 	sbuf.WriteRune('[')
+// 	key := fmt.Sprintf("%p", a)
+// 	if _, ok := seenMap[key]; !ok {
+// 		seenMap[key] = nil
+// 		len := len(a)
+// 		for i := 0; i < len; i++ {
+// 			deeplyAppendParameter(sbuf, a[i], seenMap)
+// 			if i != len-1 {
+// 				sbuf.WriteString(", ")
+// 			}
+// 		}
+// 		// allow repeats in siblings
+// 		delete(seenMap, key)
+// 	} else {
+// 		sbuf.WriteString("...")
+// 	}
+// 	sbuf.WriteRune(']')
+// }
 
 func booleanArrayAppend(sbuf *strings.Builder, a []bool) {
 	sbuf.WriteRune('[')
@@ -299,6 +334,17 @@ func byteArrayAppend(sbuf *strings.Builder, a []byte) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
 		sbuf.WriteString(fmt.Sprintf("%v", val))
+		if i != len(a)-1 {
+			sbuf.WriteString(", ")
+		}
+	}
+	sbuf.WriteRune(']')
+}
+
+func int8ArrayAppend(sbuf *strings.Builder, a []int8) {
+	sbuf.WriteRune('[')
+	for i, val := range a {
+		sbuf.WriteString(fmt.Sprintf("%d", val))
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -365,6 +411,72 @@ func doubleArrayAppend(sbuf *strings.Builder, a []float64) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
 		sbuf.WriteString(fmt.Sprintf("%f", val))
+		if i != len(a)-1 {
+			sbuf.WriteString(", ")
+		}
+	}
+	sbuf.WriteRune(']')
+}
+
+func uint16ArrayAppend(sbuf *strings.Builder, a []uint16) {
+	sbuf.WriteRune('[')
+	for i, val := range a {
+		sbuf.WriteString(fmt.Sprintf("%d", val))
+		if i != len(a)-1 {
+			sbuf.WriteString(", ")
+		}
+	}
+	sbuf.WriteRune(']')
+}
+
+func uintArrayAppend(sbuf *strings.Builder, a []uint) {
+	sbuf.WriteRune('[')
+	for i, val := range a {
+		sbuf.WriteString(fmt.Sprintf("%d", val))
+		if i != len(a)-1 {
+			sbuf.WriteString(", ")
+		}
+	}
+	sbuf.WriteRune(']')
+}
+
+func uint32ArrayAppend(sbuf *strings.Builder, a []uint32) {
+	sbuf.WriteRune('[')
+	for i, val := range a {
+		sbuf.WriteString(fmt.Sprintf("%d", val))
+		if i != len(a)-1 {
+			sbuf.WriteString(", ")
+		}
+	}
+	sbuf.WriteRune(']')
+}
+
+func uint64ArrayAppend(sbuf *strings.Builder, a []uint64) {
+	sbuf.WriteRune('[')
+	for i, val := range a {
+		sbuf.WriteString(fmt.Sprintf("%d", val))
+		if i != len(a)-1 {
+			sbuf.WriteString(", ")
+		}
+	}
+	sbuf.WriteRune(']')
+}
+
+func complex64ArrayAppend(sbuf *strings.Builder, a []complex64) {
+	sbuf.WriteRune('[')
+	for i, val := range a {
+		sbuf.WriteString(fmt.Sprintf("%v", val))
+		if i != len(a)-1 {
+			sbuf.WriteString(", ")
+		}
+	}
+	sbuf.WriteRune(']')
+}
+
+func complex128ArrayAppend(sbuf *strings.Builder, a []complex128) {
+	sbuf.WriteRune('[')
+	for i, val := range a {
+		sbuf.WriteString(fmt.Sprintf("%v", val))
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}

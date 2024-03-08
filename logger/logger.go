@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/khan-lau/kutils/container/kstrings"
+	"github.com/khan-lau/kutils/datetime"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 
 	"go.uber.org/zap"
@@ -67,32 +68,48 @@ func LoggerInstanceWithoutConsole(filename string, logLevel int8) *Logger {
 	return LoggerInstance(filename, logLevel, false)
 }
 
+func LoggerInstanceOnlyConsole(logLevel int8) *Logger {
+	return LoggerInstance("", logLevel, true)
+}
+
 func LoggerInstance(filename string, logLevel int8, needConsole bool) *Logger {
 	if zapcore.Level(logLevel) < zapcore.DebugLevel || zapcore.Level(logLevel) > zapcore.FatalLevel {
 		logLevel = int8(zapcore.InfoLevel)
 	}
 
-	// fullname := path.Base(filename)                          // 获取不包含目录的文件名
-	file_suffix := path.Ext(filename)                         // 获取文件扩展名
-	filen_prefix := strings.TrimSuffix(filename, file_suffix) // 获取文件名称和路径, 不包含扩展名
-
-	logFile, _ := rotatelogs.New(filen_prefix+".%Y%m%d%H%M"+file_suffix,
-		rotatelogs.WithMaxAge(30*24*time.Hour),    // 最长保存30天
-		rotatelogs.WithRotationTime(time.Hour*24)) // 24小时切割一次
+	filename = strings.TrimSpace(filename)
 
 	cfg := zap.NewProductionEncoderConfig()
 	//cfg.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	cfg.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05.000")
+	cfg.EncodeTime = zapcore.TimeEncoderOfLayout(datetime.DATETIME_FORMATTER_Mill)
 	cfg.EncodeLevel = zapcore.CapitalLevelEncoder
 	encoder := zapcore.NewConsoleEncoder(cfg)
 
 	var writeSyncer zapcore.WriteSyncer
-	if needConsole {
-		writeSyncer = zapcore.NewMultiWriteSyncer(zapcore.AddSync(logFile), zapcore.AddSync(os.Stdout))
-	} else {
-		writeSyncer = zapcore.NewMultiWriteSyncer(zapcore.AddSync(logFile))
+	syncers := make([]zapcore.WriteSyncer, 0, 10)
+
+	if len(filename) > 0 {
+		// fullname := path.Base(filename)                          // 获取不包含目录的文件名
+		file_suffix := path.Ext(filename)                         // 获取文件扩展名
+		filen_prefix := strings.TrimSuffix(filename, file_suffix) // 获取文件名称和路径, 不包含扩展名
+
+		logFile, _ := rotatelogs.New(filen_prefix+".%Y%m%d%H%M"+file_suffix,
+			rotatelogs.WithMaxAge(30*24*time.Hour),    // 最长保存30天
+			rotatelogs.WithRotationTime(time.Hour*24)) // 24小时切割一次
+
+		syncers = append(syncers, zapcore.AddSync(logFile))
 	}
+
+	if needConsole {
+		syncers = append(syncers, zapcore.AddSync(os.Stdout))
+	}
+
+	if len(syncers) == 0 {
+		syncers = append(syncers, zapcore.AddSync(os.Stdout))
+	}
+
+	writeSyncer = zapcore.NewMultiWriteSyncer(syncers...)
 
 	core := zapcore.NewCore(encoder, //NewJSONEncoder
 		writeSyncer,
