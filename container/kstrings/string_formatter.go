@@ -240,6 +240,8 @@ func deeplyAppendParameter(sbuf *strings.Builder, o any, seenMap map[any]any) {
 			floatArrayAppend(sbuf, o)
 		case []float64:
 			doubleArrayAppend(sbuf, o)
+		case []string:
+			stringArrayAppend(sbuf, o)
 		default:
 			objectArrayAppend(sbuf, o.([]any), seenMap)
 		}
@@ -363,6 +365,17 @@ func doubleArrayAppend(sbuf *strings.Builder, a []float64) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
 		sbuf.WriteString(fmt.Sprintf("%f", val))
+		if i != len(a)-1 {
+			sbuf.WriteString(", ")
+		}
+	}
+	sbuf.WriteRune(']')
+}
+
+func stringArrayAppend(sbuf *strings.Builder, a []string) {
+	sbuf.WriteRune('[')
+	for i, val := range a {
+		sbuf.WriteString(val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
