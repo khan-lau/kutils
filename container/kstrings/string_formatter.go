@@ -262,10 +262,25 @@ func deeplyAppendParameter(sbuf *strings.Builder, o any, seenMap map[any]any) {
 			// objectArrayAppend(sbuf, o.([]any), seenMap)
 			objectArrayAppend(sbuf, o, seenMap)
 		}
+	} else if objType.Kind() == reflect.String {
+		stringAppend(sbuf, o)
 	} else {
 		safeObjectAppend(sbuf, o)
 	}
 
+}
+
+func stringAppend(sbuf *strings.Builder, o any) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("SLF4J: Failed toString() invocation on an object of type [%T]\n", o)
+			fmt.Println(r)
+			sbuf.WriteString("[FAILED toString()]")
+		}
+	}()
+
+	oAsString := fmt.Sprintf("%v", o)
+	sbuf.WriteString(oAsString)
 }
 
 func safeObjectAppend(sbuf *strings.Builder, o any) {

@@ -52,6 +52,8 @@ func TestXxx(t *testing.T) {
 	logger.D("complex64 {} fuck off", []complex64{complex(4, 0), complex(4, 1), complex(4, 2), complex(4, 3), complex(4, 4)})
 	logger.D("complex128 {} fuck off", []complex128{complex(4, 0), complex(4, 1), complex(4, 2), complex(4, 3), complex(4, 4)})
 
+	logger.D("")
+
 	type AA struct {
 		A int
 		B string
@@ -66,4 +68,6 @@ func TestXxx(t *testing.T) {
 	logger.D("obj {} fuck off", []AA{aa, aa})
 
 	logger.D("obj {} fuck off", []*AA{&aa, &aa})
+
+	logger.D("")
 }
