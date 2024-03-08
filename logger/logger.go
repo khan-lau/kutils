@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/khan-lau/kutils/container/kstrings"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 
 	"go.uber.org/zap"
@@ -141,6 +142,43 @@ func (logger *Logger) Fatal(template string, args ...interface{}) {
 
 ///////////////////////////////////////////////////////////////
 
+func (logger *Logger) D(template string, args ...interface{}) {
+	if logger != nil {
+		logger.log.Sugar().Debugf(kstrings.FormatString(template, args...))
+	}
+}
+
+func (logger *Logger) I(template string, args ...interface{}) {
+	if logger != nil {
+		logger.log.Sugar().Infof(kstrings.FormatString(template, args...))
+	}
+}
+
+func (logger *Logger) W(template string, args ...interface{}) {
+	if logger != nil {
+		logger.log.Sugar().Warnf(kstrings.FormatString(template, args...))
+	}
+}
+
+func (logger *Logger) E(template string, args ...interface{}) {
+	if logger != nil {
+		logger.log.Sugar().Errorf(kstrings.FormatString(template, args...))
+	}
+}
+
+func (logger *Logger) DP(template string, args ...interface{}) {
+	if logger != nil {
+		logger.log.Sugar().DPanicf(kstrings.FormatString(template, args...))
+	}
+}
+func (logger *Logger) F(template string, args ...interface{}) {
+	if logger != nil {
+		logger.log.Sugar().Errorf(kstrings.FormatString(template, args...))
+	}
+}
+
+///////////////////////////////////////////////////////////////
+
 func (logger *Logger) KDebug(skip int, template string, args ...interface{}) {
 	if logger != nil {
 		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Debugf(template, args...)
@@ -174,5 +212,43 @@ func (logger *Logger) KDPanic(skip int, template string, args ...interface{}) {
 func (logger *Logger) KFatal(skip int, template string, args ...interface{}) {
 	if logger != nil {
 		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Errorf(template, args...)
+	}
+}
+
+///////////////////////////////////////////////////////////////
+
+func (logger *Logger) KD(skip int, template string, args ...interface{}) {
+	if logger != nil {
+		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Debugf(kstrings.FormatString(template, args...))
+	}
+}
+
+func (logger *Logger) KI(skip int, template string, args ...interface{}) {
+	if logger != nil {
+		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Infof(kstrings.FormatString(template, args...))
+	}
+}
+
+func (logger *Logger) KW(skip int, template string, args ...interface{}) {
+	if logger != nil {
+		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Warnf(kstrings.FormatString(template, args...))
+	}
+}
+
+func (logger *Logger) KE(skip int, template string, args ...interface{}) {
+	if logger != nil {
+		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Errorf(kstrings.FormatString(template, args...))
+	}
+}
+
+func (logger *Logger) KDP(skip int, template string, args ...interface{}) {
+	if logger != nil {
+		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).DPanicf(kstrings.FormatString(template, args...))
+	}
+}
+
+func (logger *Logger) KF(skip int, template string, args ...interface{}) {
+	if logger != nil {
+		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Errorf(kstrings.FormatString(template, args...))
 	}
 }
