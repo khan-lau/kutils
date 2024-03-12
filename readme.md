@@ -1,4 +1,4 @@
-# KUtils v0.1.0
+# KUtils v0.2.0
 
 ## kuuid 
 实现uuidV1 
