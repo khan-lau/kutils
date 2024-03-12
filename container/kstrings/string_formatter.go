@@ -2,9 +2,12 @@ package kstrings
 
 import (
 	"fmt"
-	"log"
 	"reflect"
+	"runtime"
 	"strings"
+	"time"
+
+	"github.com/khan-lau/kutils/datetime"
 )
 
 const (
@@ -33,7 +36,17 @@ func (its *FormattingTuple) Throwable() error { return its.throwable }
 ////////////////////////////////////////////////////////////////////////
 
 func Println(messagePattern string, args ...any) {
-	log.Println(FormatString(messagePattern, args...))
+	fmt.Println(FormatString(messagePattern, args...))
+}
+
+func Debug(messagePattern string, args ...any) {
+	_, file, lineNo, _ := runtime.Caller(1)
+	pos := strings.LastIndex(file, "/")
+	if pos > -1 {
+		file = file[pos+1:]
+	}
+	d := FormatString("{}:{}", file, lineNo)
+	fmt.Printf("[%s] %s\t%s\n", time.Now().Format(datetime.DATETIME_FORMATTER_Mill), d, FormatString(messagePattern, args...))
 }
 
 func FormatString(messagePattern string, args ...any) string {

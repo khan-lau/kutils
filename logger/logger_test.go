@@ -61,12 +61,9 @@ func TestXxx(t *testing.T) {
 	}
 
 	aa := AA{A: 12, B: "string", C: complex(4, -1)}
-
 	logger.D("obj {} fuck off", aa)
 	logger.D("*obj {} fuck off", &aa)
-
 	logger.D("obj {} fuck off", []AA{aa, aa})
-
 	logger.D("obj {} fuck off", []*AA{&aa, &aa})
 
 	logger.D("")

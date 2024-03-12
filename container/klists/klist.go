@@ -1,5 +1,10 @@
 package klists
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Element is an element of a linked list.
 type KElement[E comparable] struct {
 	// Next and previous pointers in the doubly-linked list of elements.
@@ -294,4 +299,43 @@ func (l *KList[E]) At(index int) *E {
 		idx++
 	}
 	return nil
+}
+
+func (l KList[E]) ToJson5(ident string) string {
+	var sb strings.Builder
+	var next *KElement[E]
+	// sb.WriteString("[\n")
+	i := 0
+	for e := l.Front(); e != nil; e = next {
+		next = e.Next()
+		sb.WriteString(fmt.Sprintf("%s%#v", ident, e.Value))
+		if i < l.Len()-1 {
+			sb.WriteString(",")
+		}
+		sb.WriteString("\n")
+		i++
+	}
+	// sb.WriteString("]")
+	return sb.String()
+}
+
+func (l KList[E]) ToString() string {
+	return l.String()
+}
+
+func (l KList[E]) String() string {
+	var sb strings.Builder
+	var next *KElement[E]
+	sb.WriteString("[")
+	i := 0
+	for e := l.Front(); e != nil; e = next {
+		next = e.Next()
+		sb.WriteString(fmt.Sprintf("%#v", e.Value))
+		if i < l.Len()-1 {
+			sb.WriteString(",")
+		}
+		i++
+	}
+	sb.WriteString("]")
+	return sb.String()
 }
