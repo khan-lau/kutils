@@ -151,6 +151,11 @@ func FirstAndLastYear(time Time.Time) (uint64, uint64) {
 	return uint64(start.Unix()), uint64(end.Unix())
 }
 
+// 将起止时间按指定周期分割, 返回每个周期的起止时间
+//   - @param time.Time start    开始时间
+//   - @param time.Time end      结束时间
+//   - @param Duration  duration 分割周期
+//   - @return []*TimeSlice  每个分段的起止时间
 func SplitDuration(start, end Time.Time, duration Duration) []*TimeSlice {
 	list := klists.New[*TimeSlice]()
 	if duration == NONE {

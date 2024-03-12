@@ -144,6 +144,64 @@ func Test_ObjectDump(t *testing.T) {
 将时间段按自然周期分组
 例如, `自然天` `自然周` `自然月` `自然年`
 
+```go
+// 获取指定时间所在月份的天数
+func MonthDays(time Time.Time) uint
+
+// 获取指定时间所在年份的天数
+func YearDays(time Time.Time) uint
+
+
+// 当前时间所在 分 的起始秒时间戳
+func MinuteFirst(time Time.Time) uint64
+
+// 取1分钟的开始时间与结束时间
+func FirstAndLastMinute(time Time.Time) (uint64, uint64)
+
+
+// 当前时间所在 小时 的起始秒时间戳
+func HourFirst(time Time.Time) uint64
+
+// 取1小时的开始时间与结束时间
+func FirstAndLastHour(time Time.Time) (uint64, uint64)
+
+
+// 当前时间所在 天 的起始秒时间戳
+func DayFirst(time Time.Time) uint64 
+
+// 取1天的开始时间与结束时间
+func FirstAndLastDay(time Time.Time) (uint64, uint64)
+
+
+// 当前时间所在 周 的起始秒时间戳
+func WeekFirst(time Time.Time) uint64
+
+// 取1周的开始时间与结束时间
+func FirstAndLastWeek(time Time.Time) (uint64, uint64)
+
+
+// 当前时间所在 月 的起始秒时间戳
+func MonthFirst(time Time.Time) uint64
+
+// 取1个月的开始时间与结束时间
+func FirstAndLastMonth(time Time.Time) (uint64, uint64)
+
+
+// 当前时间所在 年 的起始秒时间戳
+func YearFirst(time Time.Time) uint64
+
+// 取1年的开始时间与结束时间
+func FirstAndLastYear(time Time.Time) (uint64, uint64)
+
+
+// 将起止时间按指定周期分割, 返回每个周期的起止时间
+//   - @param time.Time start    开始时间
+//   - @param time.Time end      结束时间
+//   - @param Duration  duration 分割周期
+//   - @return []*TimeSlice  每个分段的起止时间
+func SplitDuration(start, end Time.Time, duration Duration) []*TimeSlice
+```
+
 ## file_format
 efile 格式解析
 
