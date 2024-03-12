@@ -40,7 +40,6 @@ func (s MyStruct) privateCibstMethod0() {
 }
 
 func Test_ObjectDump(t *testing.T) {
-
 	tok := klists.New[string]()
 	tok.PushBack("aa")
 	tok.PushBack("bb")

@@ -145,7 +145,7 @@ func objectToJson5(key string, obj interface{}, sb *strings.Builder, level uint,
 				return
 			}
 
-			sb.WriteString("{")
+			sb.WriteString(fmt.Sprintf("%s{", strings.Repeat(ident, int(level))))
 			first := true
 			publicFieldNums := 0 // public成员遍历数量
 			fieldLen := val.NumField()
@@ -170,28 +170,30 @@ func objectToJson5(key string, obj interface{}, sb *strings.Builder, level uint,
 
 			// 遍历成员方法, 暂时只支持Public方法
 			if ptr.IsValid() {
-				if publicFieldNums > 0 {
-					sb.WriteString(",")
-				}
-				sb.WriteString(fmt.Sprintf("\n%s%s:{\n", strings.Repeat(ident, int(level)), "func"))
 				methodMap := getMethodMap(*ptr)
 				itemLen := len(methodMap)
-				i := 0
-				level++
+				if publicFieldNums > 0 && itemLen > 0 {
+					sb.WriteString(",")
 
-				for k, v := range methodMap {
-					sb.WriteString(fmt.Sprintf("%s%s:\"%s\"", strings.Repeat(ident, int(level)), k, v))
-					if i < itemLen-1 {
-						sb.WriteString(",")
+					sb.WriteString(fmt.Sprintf("\n%s%s:{\n", strings.Repeat(ident, int(level)), "func"))
+
+					i := 0
+					level++
+
+					for k, v := range methodMap {
+						sb.WriteString(fmt.Sprintf("%s%s:\"%s\"", strings.Repeat(ident, int(level)), k, v))
+						if i < itemLen-1 {
+							sb.WriteString(",")
+						}
+						sb.WriteString("\n")
+						i++
 					}
-					sb.WriteString("\n")
-					i++
+					level--
+					sb.WriteString(fmt.Sprintf("%s}", strings.Repeat(ident, int(level))))
 				}
-				level--
-				sb.WriteString(fmt.Sprintf("%s}\n", strings.Repeat(ident, int(level))))
 			}
 			level--
-			sb.WriteString(fmt.Sprintf("%s}", strings.Repeat(ident, int(level))))
+			sb.WriteString(fmt.Sprintf("\n%s}", strings.Repeat(ident, int(level))))
 		}
 	case reflect.Array, reflect.Slice:
 		{
@@ -221,7 +223,7 @@ func objectToJson5(key string, obj interface{}, sb *strings.Builder, level uint,
 		str := funcVarToJson5(key, *ptr)
 		sb.WriteString(fmt.Sprintf("\"func%s\"", str))
 	case reflect.Map:
-		sb.WriteString("{")
+		sb.WriteString(fmt.Sprintf("%s{", strings.Repeat(ident, int(level))))
 		keys := val.MapKeys()
 		length := len(keys)
 		i := 0
