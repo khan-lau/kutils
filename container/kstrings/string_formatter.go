@@ -53,52 +53,25 @@ func FormatString(messagePattern string, args ...any) string {
 	return SliceFormat(messagePattern, args...).Message()
 }
 
-// @bref Performs single argument substitution for the 'messagePattern' passed as
-// parameter.
-//
-// For example,
-//
-// MessageFormatter.format(&quot;Hi {}.&quot;, &quot;there&quot;);
-//
-// will return the string "Hi there.".
-//
-// @param messagePattern
-//
-//	The message pattern which will be parsed and formatted
-//
-// @param arg
-//
-//	The argument to be substituted in place of the formatting anchor
-//
-// @return The formatted message
+// @bref Performs single argument substitution for the 'messagePattern' passed as parameter.
+//   - For example,
+//   - -- MessageFormatter.format(&quot;Hi {}.&quot;, &quot;there&quot;);
+//   - -- will return the string "Hi there.".
+//   - @param messagePattern  The message pattern which will be parsed and formatted
+//   - @param arg The argument to be substituted in place of the formatting anchor
+//   - @return The formatted message
 func Format(messagePattern string, arg any) *FormattingTuple {
 	return ArrayFormat(messagePattern, []any{arg})
 }
 
-// Performs a two argument substitution for the 'messagePattern' passed as
-// parameter.
-//
-// For example,
-//
-// MessageFormatter.format(&quot;Hi {}. My name is {}.&quot;, &quot;Alice&quot;, &quot;Bob&quot;);
-//
-// will return the string "Hi Alice. My name is Bob.".
-//
-// @param messagePattern
-//
-//	The message pattern which will be parsed and formatted
-//
-// @param arg1
-//
-//	The argument to be substituted in place of the first formatting
-//	anchor
-//
-// @param arg2
-//
-//	The argument to be substituted in place of the second formatting
-//	anchor
-//
-// @return The formatted message
+// Performs a two argument substitution for the 'messagePattern' passed as parameter.
+//   - For example,
+//   - --  MessageFormatter.format(&quot;Hi {}. My name is {}.&quot;, &quot;Alice&quot;, &quot;Bob&quot;);
+//   - --  will return the string "Hi Alice. My name is Bob.".
+//   - @param messagePattern  The message pattern which will be parsed and formatted
+//   - @param arg1 The argument to be substituted in place of the first formatting anchor
+//   - @param arg2 The argument to be substituted in place of the second formatting anchor
+//   - @return The formatted message
 func FormatArgs(messagePattern string, arg1, arg2 any) *FormattingTuple {
 	return ArrayFormat(messagePattern, []any{arg1, arg2})
 }
@@ -110,7 +83,6 @@ func SliceFormat(messagePattern string, args ...any) *FormattingTuple {
 func ArrayFormat(messagePattern string, argArray []any) *FormattingTuple {
 	throwableCandidate := ThrowableCandidate(argArray)
 	args := argArray
-	// var err error = nil
 	if throwableCandidate != nil {
 		args, _ = TrimmedCopy(argArray)
 	}
@@ -133,15 +105,11 @@ func ArrayFormatWithError(messagePattern string, argArray []any, throwable error
 	for y = 0; y < len(argArray); y = y + 1 {
 
 		j = IndexOf(messagePattern, DELIM_STR, i)
-
-		if j == -1 {
-			// no more variables
-			if i == 0 { // this is a simple string
-				return NewFormattingTuple(messagePattern, argArray, throwable)
-			} else { // add the tail string which contains no variables and return
-				// the result.
+		if j == -1 { // index i 之后 未发现参数替代符`{}`
+			if i == 0 { // 普通字符串
+				return NewFormattingTuple(messagePattern, argArray, fmt.Errorf("%s", "sample string"))
+			} else { // add the tail string which contains no variables and return the result.
 				sbuf.WriteString(messagePattern[i:])
-				//sbuf.append(messagePattern, i, messagePattern.length())
 				return NewFormattingTuple(sbuf.String(), argArray, throwable)
 			}
 		} else {
@@ -149,16 +117,12 @@ func ArrayFormatWithError(messagePattern string, argArray []any, throwable error
 				if !isDoubleEscaped(messagePattern, j) {
 					y-- // DELIM_START was escaped, thus should not be incremented
 					sbuf.WriteString(messagePattern[i : j-1])
-					//sbuf.append(messagePattern, i, j-1)
 					sbuf.WriteByte(DELIM_START)
-					// sbuf.append(DELIM_START)
 					i = j + 1
 				} else {
-					// The escape character preceding the delimiter start is
-					// itself escaped: "abc x:\\{}"
+					// The escape character preceding the delimiter start is itself escaped: "abc x:\\{}"
 					// we have to consume one backward slash
 					sbuf.WriteString(messagePattern[i : j-1])
-					// sbuf.append(messagePattern, i, j-1)
 					paraMap := make(map[any]any)
 					deeplyAppendParameter(&sbuf, argArray[y], paraMap)
 					i = j + 2
@@ -166,7 +130,6 @@ func ArrayFormatWithError(messagePattern string, argArray []any, throwable error
 			} else {
 				// normal case
 				sbuf.WriteString(messagePattern[i:j])
-				// sbuf.append(messagePattern, i, j)
 				paraMap := make(map[any]any)
 				deeplyAppendParameter(&sbuf, argArray[y], paraMap)
 				i = j + 2
@@ -175,7 +138,6 @@ func ArrayFormatWithError(messagePattern string, argArray []any, throwable error
 	}
 	// append the characters following the last {} pair.
 	sbuf.WriteString(messagePattern[i:])
-	// sbuf.append(messagePattern, i, messagePattern.length())
 	return NewFormattingTuple(sbuf.String(), argArray, throwable)
 }
 
@@ -195,10 +157,8 @@ func ThrowableCandidate(args []any) error {
 }
 
 // @bref Helper method to get all but the last element of an array
-//
-// @param argArray The arguments from which we want to remove the last element
-//
-// @return a copy of the array without the last element
+//   - @param argArray The arguments from which we want to remove the last element
+//   - @return a copy of the array without the last element
 func TrimmedCopy(args []any) ([]any, error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("%s", "non-sensical empty or null argument array")
