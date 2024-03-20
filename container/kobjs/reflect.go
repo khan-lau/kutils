@@ -75,18 +75,30 @@ func ObjectToJson5(obj interface{}) string {
 	initUnsafe()
 
 	var sb strings.Builder
-	objectToJson5("", obj, &sb, 0, "  ")
+	objectToJson5("", obj, &sb, true, 0, "  ")
+
+	return sb.String()
+}
+
+// 将对象的成员变量与成员函数, 通过beautiful json5的格式打印, 不包含成员函数
+//   - @return string 格式化的json5字符串
+func ObjectToJson5WithoutFunc(obj interface{}) string {
+	initUnsafe()
+
+	var sb strings.Builder
+	objectToJson5("", obj, &sb, false, 0, "  ")
 
 	return sb.String()
 }
 
 // 将对象树导出为格式化过的JSON5字符串
-//   - @param string           key   对象变量名称
-//   - @param any              obj   对象实例, 也可以是指针
-//   - @param *strings.Builder sb    字符串缓冲
-//   - @param uint             level 对象深度
-//   - @param string           ident 格式化前导字符串, 通常为 "  " 或 "\t"
-func objectToJson5(key string, obj interface{}, sb *strings.Builder, level uint, ident string) {
+//   - @param string           key            对象变量名称
+//   - @param any              obj            对象实例, 也可以是指针
+//   - @param *strings.Builder sb             字符串缓冲
+//   - @param bool             needExportFunc 是否需要导出成员函数
+//   - @param uint             level          对象深度
+//   - @param string           ident          格式化前导字符串, 通常为 "  " 或 "\t"
+func objectToJson5(key string, obj interface{}, sb *strings.Builder, needExportFunc bool, level uint, ident string) {
 	val := mustBeValue(obj)
 	if len(key) > 0 {
 		sb.WriteString(fmt.Sprintf("\n%s%s:", strings.Repeat(ident, int(level)), key))
@@ -165,33 +177,36 @@ func objectToJson5(key string, obj interface{}, sb *strings.Builder, level uint,
 				}
 				publicFieldNums++
 
-				objectToJson5(fieldName, subObj, sb, level, ident)
+				objectToJson5(fieldName, subObj, sb, needExportFunc, level, ident)
 			}
 
-			// 遍历成员方法, 暂时只支持Public方法
-			if ptr.IsValid() {
-				methodMap := getMethodMap(*ptr)
-				itemLen := len(methodMap)
-				if publicFieldNums > 0 && itemLen > 0 {
-					sb.WriteString(",")
+			if needExportFunc {
+				// 遍历成员方法, 暂时只支持Public方法
+				if ptr.IsValid() {
+					methodMap := getMethodMap(*ptr)
+					itemLen := len(methodMap)
+					if publicFieldNums > 0 && itemLen > 0 {
+						sb.WriteString(",")
 
-					sb.WriteString(fmt.Sprintf("\n%s%s:{\n", strings.Repeat(ident, int(level)), "func"))
+						sb.WriteString(fmt.Sprintf("\n%s%s:{\n", strings.Repeat(ident, int(level)), "func"))
 
-					i := 0
-					level++
+						i := 0
+						level++
 
-					for k, v := range methodMap {
-						sb.WriteString(fmt.Sprintf("%s%s:\"%s\"", strings.Repeat(ident, int(level)), k, v))
-						if i < itemLen-1 {
-							sb.WriteString(",")
+						for k, v := range methodMap {
+							sb.WriteString(fmt.Sprintf("%s%s:\"%s\"", strings.Repeat(ident, int(level)), k, v))
+							if i < itemLen-1 {
+								sb.WriteString(",")
+							}
+							sb.WriteString("\n")
+							i++
 						}
-						sb.WriteString("\n")
-						i++
+						level--
+						sb.WriteString(fmt.Sprintf("%s}", strings.Repeat(ident, int(level))))
 					}
-					level--
-					sb.WriteString(fmt.Sprintf("%s}", strings.Repeat(ident, int(level))))
 				}
 			}
+
 			level--
 			sb.WriteString(fmt.Sprintf("\n%s}", strings.Repeat(ident, int(level))))
 		}
@@ -201,7 +216,7 @@ func objectToJson5(key string, obj interface{}, sb *strings.Builder, level uint,
 			itemLen := val.Len()
 			level++
 			for i := 0; i < itemLen; i++ {
-				objectToJson5("", val.Index(i), sb, level, ident)
+				objectToJson5("", val.Index(i), sb, needExportFunc, level, ident)
 				if i < itemLen-1 {
 					sb.WriteString(",")
 				}
@@ -230,7 +245,7 @@ func objectToJson5(key string, obj interface{}, sb *strings.Builder, level uint,
 		level++
 		for _, key := range keys {
 			strct := val.MapIndex(key)
-			objectToJson5(fmt.Sprintf("%v", key.Interface()), strct, sb, level, ident)
+			objectToJson5(fmt.Sprintf("%v", key.Interface()), strct, sb, needExportFunc, level, ident)
 			if i < length-1 {
 				sb.WriteString(",")
 			}
@@ -254,7 +269,18 @@ func ObjectDump(obj interface{}) string {
 	initUnsafe()
 
 	var sb strings.Builder
-	objectDump("", obj, &sb)
+	objectDump("", obj, &sb, true)
+
+	return sb.String()
+}
+
+// 将对象的成员变量与成员函数 json5的格式打印, 不包含成员函数
+//   - @return string json5字符串
+func ObjectDumpWithoutFunc(obj interface{}) string {
+	initUnsafe()
+
+	var sb strings.Builder
+	objectDump("", obj, &sb, false)
 
 	return sb.String()
 }
@@ -263,7 +289,7 @@ func ObjectDump(obj interface{}) string {
 //   - @param string           key   对象变量名称
 //   - @param any              obj   对象实例, 也可以是指针
 //   - @param *strings.Builder sb    字符串缓冲
-func objectDump(key string, obj interface{}, sb *strings.Builder) {
+func objectDump(key string, obj interface{}, sb *strings.Builder, needExportFunc bool) {
 	val := mustBeValue(obj)
 	if len(key) > 0 {
 		sb.WriteString(fmt.Sprintf("%s:", key))
@@ -331,18 +357,20 @@ func objectDump(key string, obj interface{}, sb *strings.Builder) {
 					sb.WriteString(",")
 				}
 				publicFieldNums++
-				objectDump(fieldName, subObj, sb)
+				objectDump(fieldName, subObj, sb, needExportFunc)
 			}
 
 			// 遍历成员方法, 暂时只支持Public方法
-			if ptr.IsValid() {
-				if publicFieldNums > 0 {
-					sb.WriteString(",")
+			if needExportFunc {
+				if ptr.IsValid() {
+					if publicFieldNums > 0 {
+						sb.WriteString(",")
+					}
+					sb.WriteString(fmt.Sprintf("%s:", "func"))
+					sb.WriteString("{")
+					getMethod(*ptr, sb)
+					sb.WriteString("}")
 				}
-				sb.WriteString(fmt.Sprintf("%s:", "func"))
-				sb.WriteString("{")
-				getMethod(*ptr, sb)
-				sb.WriteString("}")
 			}
 			sb.WriteString("}")
 		}
@@ -351,7 +379,7 @@ func objectDump(key string, obj interface{}, sb *strings.Builder) {
 			sb.WriteString("[")
 			itemLen := val.Len()
 			for i := 0; i < itemLen; i++ {
-				objectDump("", val.Index(i), sb)
+				objectDump("", val.Index(i), sb, needExportFunc)
 				if i < itemLen-1 {
 					sb.WriteString(",")
 				}
@@ -373,7 +401,7 @@ func objectDump(key string, obj interface{}, sb *strings.Builder) {
 		i := 0
 		for _, key := range keys {
 			strct := val.MapIndex(key)
-			objectDump(fmt.Sprintf("%v", key.Interface()), strct, sb)
+			objectDump(fmt.Sprintf("%v", key.Interface()), strct, sb, needExportFunc)
 			if i < length-1 {
 				sb.WriteString(",")
 			}

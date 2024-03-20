@@ -65,14 +65,14 @@ type Logger struct {
 
 // var log *zap.Logger
 func LoggerInstanceWithoutConsole(filename string, logLevel int8) *Logger {
-	return LoggerInstance(filename, logLevel, false)
+	return LoggerInstance(filename, logLevel, false, true)
 }
 
 func LoggerInstanceOnlyConsole(logLevel int8) *Logger {
-	return LoggerInstance("", logLevel, true)
+	return LoggerInstance("", logLevel, true, false)
 }
 
-func LoggerInstance(filename string, logLevel int8, needConsole bool) *Logger {
+func LoggerInstance(filename string, logLevel int8, needConsole bool, needTerminalColor bool) *Logger {
 	if zapcore.Level(logLevel) < zapcore.DebugLevel || zapcore.Level(logLevel) > zapcore.FatalLevel {
 		logLevel = int8(zapcore.InfoLevel)
 	}
@@ -83,7 +83,12 @@ func LoggerInstance(filename string, logLevel int8, needConsole bool) *Logger {
 	//cfg.EncodeTime = zapcore.ISO8601TimeEncoder
 
 	cfg.EncodeTime = zapcore.TimeEncoderOfLayout(datetime.DATETIME_FORMATTER_Mill)
-	cfg.EncodeLevel = zapcore.CapitalLevelEncoder
+	if needTerminalColor {
+		cfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	} else {
+		cfg.EncodeLevel = zapcore.CapitalLevelEncoder
+	}
+
 	encoder := zapcore.NewConsoleEncoder(cfg)
 
 	var writeSyncer zapcore.WriteSyncer
