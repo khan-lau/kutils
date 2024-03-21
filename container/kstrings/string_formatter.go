@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/khan-lau/kutils/container/kobjs"
 	"github.com/khan-lau/kutils/datetime"
 )
 
@@ -81,6 +82,15 @@ func SliceFormat(messagePattern string, args ...any) *FormattingTuple {
 }
 
 func ArrayFormat(messagePattern string, argArray []any) *FormattingTuple {
+	length := len(argArray)
+	if length > 0 {
+		item := argArray[length-1]
+		t, ok := item.(error)
+		if ok {
+			argArray[length-1] = t.Error()
+		}
+	}
+
 	throwableCandidate := ThrowableCandidate(argArray)
 	args := argArray
 	if throwableCandidate != nil {
@@ -195,6 +205,7 @@ func deeplyAppendParameter(sbuf *strings.Builder, o any, seenMap map[any]any) {
 	}
 
 	objType := reflect.TypeOf(o)
+
 	if objType.Kind() == reflect.Slice || objType.Kind() == reflect.Array {
 		switch o := o.(type) {
 		case []bool:
@@ -238,7 +249,18 @@ func deeplyAppendParameter(sbuf *strings.Builder, o any, seenMap map[any]any) {
 	} else if objType.Kind() == reflect.String {
 		stringAppend(sbuf, o)
 	} else {
-		safeObjectAppend(sbuf, o)
+		typeStr := objType.String()
+		if strings.Contains(typeStr, "klists.KList") {
+			oAsString := kobjs.ObjectDump(o)
+			sbuf.WriteString(oAsString)
+		} else if strings.Contains(typeStr, "errors.errorString") {
+			err, _ := o.(error)
+			oAsString := err.Error()
+			sbuf.WriteString(oAsString)
+		} else {
+			safeObjectAppend(sbuf, o)
+		}
+
 	}
 
 }

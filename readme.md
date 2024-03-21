@@ -1,11 +1,11 @@
-# KUtils v0.2.0
+# KUtils v0.2.3
 
 ## kuuid 
 实现uuidV1 
 
 ## container 
 1. klists 实现泛型的list
-2. kstrings 实现 StringFormatter
+2. kstrings 实现 StringFormatter 与 StringParams
 3. kobjs 实现obj to json5 string
 4. kslices slice的补充工具库
 5. kmaps map的补充工具库
@@ -33,6 +33,27 @@ func Test_StringFormatter(t *testing.T) {
 	kstrings.Println("int:{}, double:{}, bool:{}, string:{}, array[int]:{}, array[bool]:{}",
 		0, 0.1, false, "test001", []any{1, 2, 3}, []any{false, true, true})
 }
+```
+
+```go
+// StringParams 范例
+func TestStringParams(t *testing.T) {
+	// $(func_name) 暂且认为是函数
+	// ${var_name} 暂且认为是变量 
+	str := "hello word ${param1}! i'm $(param3),  test off ${param2}...${param2}.."
+	params := kstrings.Parse(str)
+	glog.D(params.Set("param1", "var001").Set("param2", "var002").SetFunc("param3", "fun3").Build())
+	glog.D("{}", params.Get())
+	glog.D("{}", params.GetVarName())
+	glog.D("{}", params.GetFuncName())
+}
+```
+输出结果
+```log
+2024-03-21 11:51:24.038 DEBUG   logger/logger_test.go:24        hello word var001! i'm fun3,  test off var002...var002..
+2024-03-21 11:51:24.047 DEBUG   logger/logger_test.go:25        ["${param1}","$(param3)","${param2}"]
+2024-03-21 11:51:24.047 DEBUG   logger/logger_test.go:26        ["param1","param2"]
+2024-03-21 11:51:24.047 DEBUG   logger/logger_test.go:27        ["param3"]
 ```
 
 
@@ -222,15 +243,16 @@ chacha20算法 加密解密
 
 ```go
 
-logger := LoggerInstanceOnlyConsole(-1)
+logger := LoggerInstanceOnlyConsole(int8(DebugLevel))
+	logger.D("{}", fmt.Errorf("test error"))
 	logger.D("string {} fuck off", []string{"0", "1", "2", "3", "4"})
 
 	cmp := complex(4, 4)
 	cmp64 := complex64(cmp)
-	logger.D("complex128 {} complex64 {} fuck off", cmp, cmp64)
+	logger.D("complex128 {} complex64 {} test off", cmp, cmp64)
 
-	logger.D("complex64 {} fuck off", []complex64{complex(4, 0), complex(4, 1), complex(4, 2), complex(4, 3), complex(4, 4)})
-	logger.D("complex128 {} fuck off", []complex128{complex(4, 0), complex(4, 1), complex(4, 2), complex(4, 3), complex(4, 4)})
+	logger.D("complex64 {} test off", []complex64{complex(4, 0), complex(4, 1), complex(4, 2), complex(4, 3), complex(4, 4)})
+	logger.D("complex128 {} test off", []complex128{complex(4, 0), complex(4, 1), complex(4, 2), complex(4, 3), complex(4, 4)})
 
 
 	type AA struct {
@@ -239,10 +261,10 @@ logger := LoggerInstanceOnlyConsole(-1)
 		C complex128
 	}
 	aa := AA{A: 12, B: "string", C: complex(4, -1)}
-	logger.D("obj {} fuck off", aa)
-	logger.D("*obj {} fuck off", &aa)
-	logger.D("obj {} fuck off", []AA{aa, aa})
-	logger.D("obj {} fuck off", []*AA{&aa, &aa})
+	logger.D("obj {} test off", aa)
+	logger.D("*obj {} test off", &aa)
+	logger.D("obj {} test off", []AA{aa, aa})
+	logger.D("obj {} test off", []*AA{&aa, &aa})
 
 
 ```

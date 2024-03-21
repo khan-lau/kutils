@@ -65,11 +65,11 @@ type Logger struct {
 
 // var log *zap.Logger
 func LoggerInstanceWithoutConsole(filename string, logLevel int8) *Logger {
-	return LoggerInstance(filename, logLevel, false, true)
+	return LoggerInstance(filename, logLevel, false, false)
 }
 
 func LoggerInstanceOnlyConsole(logLevel int8) *Logger {
-	return LoggerInstance("", logLevel, true, false)
+	return LoggerInstance("", logLevel, true, true)
 }
 
 func LoggerInstance(filename string, logLevel int8, needConsole bool, needTerminalColor bool) *Logger {

@@ -33,3 +33,13 @@ func ToKSlice[T comparable](l *KList[T]) []T {
 	}
 	return s
 }
+
+func FilterFunc[T comparable](l *KList[T], callback func(v T) bool) *KList[T] {
+	nl := New[T]()
+	for e := l.Front(); e != nil; e = e.Next() {
+		if callback(e.Value) {
+			nl.PushBack(e.Value)
+		}
+	}
+	return nl
+}
