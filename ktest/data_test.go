@@ -1,4 +1,4 @@
-package data_test
+package ktest
 
 import (
 	"encoding/hex"

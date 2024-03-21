@@ -1,4 +1,4 @@
-package logger
+package ktest
 
 import (
 	"fmt"
@@ -8,14 +8,15 @@ import (
 	"github.com/khan-lau/kutils/container/klists"
 	"github.com/khan-lau/kutils/container/kobjs"
 	"github.com/khan-lau/kutils/container/kstrings"
+	"github.com/khan-lau/kutils/logger"
 )
 
 var (
-	glog *Logger
+	glog *logger.Logger
 )
 
 func init() {
-	glog = LoggerInstanceOnlyConsole(int8(DebugLevel))
+	glog = logger.LoggerInstanceOnlyConsole(int8(logger.DebugLevel))
 }
 
 func TestStringParams(t *testing.T) {
@@ -53,7 +54,7 @@ func Test_Param(t *testing.T) {
 }
 
 func TestLog(t *testing.T) {
-	logger := LoggerInstanceOnlyConsole(-1)
+	logger := logger.LoggerInstanceOnlyConsole(-1)
 
 	logger.D("fuck off")
 	logger.D("{} fuck off", "maybe")

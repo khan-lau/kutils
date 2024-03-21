@@ -1,4 +1,4 @@
-package efile
+package ktest
 
 import (
 	"bytes"
@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/khan-lau/kutils/file_format/efile"
 )
 
 func Test_ParseDocumentHeader(t *testing.T) {
 	//<! Entity=华东 type=测试2011-11-03 dataTime='20120411 11:12:14' !>
 	str := "<! Entity=华东 type=测试2011-11-03 dataTime='20120411 11:12:14' !>// fuck off"
-	pAttributes, err := ParseDocumentHeader(str)
+	pAttributes, err := efile.ParseDocumentHeader(str)
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())
@@ -28,7 +30,7 @@ func Test_ParseNodeLine(t *testing.T) {
 	// str := "<test::华东 DDMM='华东电网' date='2012-04-11 11:12' / >  //test"
 	str := "<DataBlock NameTag=\"DG\"  DateTag=\"date\">"
 	// str := "<sec/>"
-	name, isEnd, pAttributes, err := ParseNodeLine(str)
+	name, isEnd, pAttributes, err := efile.ParseNodeLine(str)
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())
@@ -44,7 +46,7 @@ func Test_ParseNodeLine(t *testing.T) {
 	fmt.Printf("\n")
 
 	str = "<test::华东 DDMM='华东电网' date='2012-04-11 11:12'>  //test"
-	name, isEnd, pAttributes, err = ParseNodeLine(str)
+	name, isEnd, pAttributes, err = efile.ParseNodeLine(str)
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())
@@ -70,7 +72,7 @@ func Test_ParseEText(t *testing.T) {
 		delim = "\t"
 	}
 
-	fields, err := ParseEText(str, delim)
+	fields, err := efile.ParseEText(str, delim)
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())
@@ -81,109 +83,6 @@ func Test_ParseEText(t *testing.T) {
 	for e := fields.Front(); e != nil; e = e.Next() {
 		fmt.Printf("index: %d, field: %s\n", idx, e.Value)
 		idx++
-	}
-}
-
-func Test_ParseSigleColTable(t *testing.T) {
-	str := `
-	//@@顺序 属性名 属性值
-	#1 单位名称 花花电网 
-	#2 发生时间 '2011-11-03 00:00:02.0' 
-	#3 次数 32
-	#4 test 't' 
-	
-	#1 单位名称 花花电网 
-	#2 发生时间 '2011-11-03 00:00:02.0' 
-	#3 次数 32 
-	#4 test 't' 
-	//#5 a b
-	
-	#1 单位名称 花花电网 
-	#2 发生时间 '2011-11-03 00:00:02.0' 
-	#3 次数 32 
-	#4 test 't' 
-	
-	#1 单位名称 花花电网 
-	#2 发生时间 '2011-11-03 00:00:02.0' 
-	#3 次数 32 
-	#4 test 't' 
-	`
-	buf := bytes.NewBufferString(str)
-	records, err := parseSigleColTable(buf, " ")
-	if err != nil {
-		fmt.Println(err)
-		t.Errorf("%s", err.Error())
-		return
-	}
-
-	for eRow := records.Front(); eRow != nil; eRow = eRow.Next() {
-		row := eRow.Value
-		for eCol := row.Front(); eCol != nil; eCol = eCol.Next() {
-			col := eCol.Value
-
-			fmt.Printf("%s\t", col)
-		}
-		fmt.Println()
-	}
-}
-
-func Test_ParseMultColTable(t *testing.T) {
-	str := `
-	//@#顺序 属性名 '花花电网' '花花电网' '花花电网' '花花电网' 
-	#1 单位名称 花花电网 花花电网 花花电网 花花电网 
-	#2 发生时间 '2011-11-03 00:00:02.0' '2011-11-03 00:00:02.0' '2011-11-03 00:00:02.0' '2011-11-03 00:00:02.0' '2'
-	#3 次数 32 32 32 32 
-	#4 test t t t t
-	`
-	buf := bytes.NewBufferString(str)
-	records, err := parseMultColTable(buf, " ")
-	if err != nil {
-		fmt.Println(err)
-		t.Errorf("%s", err.Error())
-		return
-	}
-
-	for eRow := records.Front(); eRow != nil; eRow = eRow.Next() {
-		row := eRow.Value
-		for eCol := row.Front(); eCol != nil; eCol = eCol.Next() {
-			col := eCol.Value
-
-			fmt.Printf("%s\t", col)
-		}
-		fmt.Println()
-	}
-}
-
-func Test_ParseTable(t *testing.T) {
-	str := `
-	//@顺序 单位名称 发生时间 次数 
-	#1 花花电网 无 1000 
-	#2 花花电网 无 1000 
-	#3 花花电网 无 1000 
-	#4 花花电网 无 1000 
-	#5 花花电网 无 1000 
-	#6 花花电网 无 1000 
-	#7 花花电网 无 1000 
-	#8 花花电网 无 1000 
-	#9 花花电网 无 1000 
-	#10 花花电网1 无 1000 
-	`
-	buf := bytes.NewBufferString(str)
-	records, err := parseTable(buf, " ")
-	if err != nil {
-		fmt.Println(err)
-		t.Errorf("%s", err.Error())
-		return
-	}
-
-	for eRow := records.Front(); eRow != nil; eRow = eRow.Next() {
-		row := eRow.Value
-		for eCol := row.Front(); eCol != nil; eCol = eCol.Next() {
-			col := eCol.Value
-
-			fmt.Printf("%s\t", col)
-		}
-		fmt.Println()
 	}
 }
 
@@ -253,13 +152,13 @@ func Test_ParseETable(t *testing.T) {
 	</test::华东>	
 	`
 	fmt.Println("横表式:")
-	root, err := ParseRootString(str)
+	root, err := efile.ParseRootString(str)
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())
 		return
 	}
-	records, err := ParseETable(root, "test::华东")
+	records, err := efile.ParseETable(root, "test::华东")
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())
@@ -286,13 +185,13 @@ func Test_ParseETable(t *testing.T) {
 	</DG::铁心桥>
 	`
 	fmt.Println("多列式:")
-	root, err = ParseRootString(str)
+	root, err = efile.ParseRootString(str)
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())
 		return
 	}
-	records, err = ParseETable(root, "DG::铁心桥")
+	records, err = efile.ParseETable(root, "DG::铁心桥")
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())
@@ -331,13 +230,13 @@ func Test_ParseETable(t *testing.T) {
 	</DG::铁心桥>
 	`
 	fmt.Println("单列式:")
-	root, err = ParseRootString(str)
+	root, err = efile.ParseRootString(str)
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())
 		return
 	}
-	records, err = ParseETable(root, "DG::铁心桥")
+	records, err = efile.ParseETable(root, "DG::铁心桥")
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())
@@ -383,7 +282,7 @@ func Test_ParseRootBytes(t *testing.T) {
 	`
 
 	buf := bytes.NewBufferString(str)
-	root, err := ParseRootBytes(buf)
+	root, err := efile.ParseRootBytes(buf)
 
 	if err != nil {
 		fmt.Println(err)
@@ -418,14 +317,14 @@ func Test_ParseRootBytes(t *testing.T) {
 
 func Test_ParseRootEFile(t *testing.T) {
 	filePath := "C:\\Private\\Test\\elanguage\\data\\横表式.txt"
-	root, err := ParseRootEFile(filePath)
+	root, err := efile.ParseRootEFile(filePath)
 
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())
 		return
 	}
-	records, err := ParseETable(root, "test::华东")
+	records, err := efile.ParseETable(root, "test::华东")
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())
@@ -478,7 +377,7 @@ func Test_GetENodeByPath(t *testing.T) {
 	`
 
 	buf := bytes.NewBufferString(str)
-	root, err := ParseRootBytes(buf)
+	root, err := efile.ParseRootBytes(buf)
 
 	if err != nil {
 		fmt.Println(err)
@@ -486,7 +385,7 @@ func Test_GetENodeByPath(t *testing.T) {
 		return
 	}
 
-	node, err := GetENodeByPath(root, "DataBlock/Data/Sec1/Row1")
+	node, err := efile.GetENodeByPath(root, "DataBlock/Data/Sec1/Row1")
 	if err != nil {
 		fmt.Println(err)
 		t.Errorf("%s", err.Error())

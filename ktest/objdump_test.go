@@ -1,4 +1,4 @@
-package kobjs
+package ktest
 
 import (
 	"container/list"
@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/khan-lau/kutils/container/klists"
+	"github.com/khan-lau/kutils/container/kobjs"
 	"github.com/khan-lau/kutils/container/kstrings"
 )
 
@@ -76,7 +77,7 @@ func Test_ObjectDump(t *testing.T) {
 
 	// log.Printf("")
 
-	str = ObjectToJson5(myInstance)
+	str = kobjs.ObjectToJson5(myInstance)
 	kstrings.Debug("{}", str)
 
 	kstrings.Debug("")
@@ -106,7 +107,7 @@ func Test_FormatJson5(t *testing.T) {
 	map01["key01"] = "value01"
 	map01["key02"] = "value02"
 
-	str := ObjectDump(map01)
+	str := kobjs.ObjectDump(map01)
 	kstrings.Debug("{}", str)
 }
 
