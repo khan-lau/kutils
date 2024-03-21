@@ -26,6 +26,13 @@ func TestStringParams(t *testing.T) {
 	glog.D("{}", params.Get())
 	glog.D("{}", params.GetVarName())
 	glog.D("{}", params.GetFuncName())
+
+	l := klists.ToKSlice[string](params.Get())
+	for _, item := range l {
+		p := kstrings.KParameter(item)
+		glog.D("{}", p.TypeString())
+	}
+
 }
 
 func Test_Param(t *testing.T) {

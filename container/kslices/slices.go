@@ -209,3 +209,14 @@ func StringToSlice(s string, length int) []byte {
 		return slice
 	}
 }
+
+// 从切换过滤出一个新的切片
+func FilterFunc[T comparable](s []T, callback func(val T) bool) []T {
+	slice := make([]T, 0, len(s))
+	for _, item := range s {
+		if callback(item) {
+			slice = append(slice, item)
+		}
+	}
+	return slice
+}

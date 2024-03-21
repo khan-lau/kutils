@@ -8,6 +8,14 @@ import (
 	"github.com/khan-lau/kutils/container/kmaps"
 )
 
+type TYPE uint
+
+const (
+	NONE_TYPE TYPE = 0
+	VAR_TYPE  TYPE = 1
+	FUNC_TYPE TYPE = 2
+)
+
 // 字符串参数解析与处理
 //   - 例如: "hello word ${param1}! i'm $(param3),  fuck off ${param2}..."
 //   - - ${param1} ${} 代表变量
@@ -101,4 +109,26 @@ func (that *StringParams) GetFuncName() *klists.KList[string] {
 		}
 	}
 	return l
+}
+
+type KParameter string
+
+func (that KParameter) Type() TYPE {
+	if strings.HasPrefix(string(that), "${") {
+		return VAR_TYPE
+	} else if strings.HasPrefix(string(that), "$(") {
+		return FUNC_TYPE
+	} else {
+		return NONE_TYPE
+	}
+}
+
+func (that KParameter) TypeString() string {
+	if strings.HasPrefix(string(that), "${") {
+		return "VAR_TYPE"
+	} else if strings.HasPrefix(string(that), "$(") {
+		return "FUNC_TYPE"
+	} else {
+		return "NONE_TYPE"
+	}
 }
