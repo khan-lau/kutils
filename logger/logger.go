@@ -73,17 +73,20 @@ func LoggerInstanceOnlyConsole(logLevel int8) *Logger {
 }
 
 func LoggerInstance(filename string, logLevel int8, needConsole bool, needTerminalColor bool) *Logger {
-	if zapcore.Level(logLevel) < zapcore.DebugLevel || zapcore.Level(logLevel) > zapcore.FatalLevel {
-		logLevel = int8(zapcore.InfoLevel)
+	conf := NewConfigure().SetLogFile(filename).SetLevel(Level(logLevel)).ShowConsole(needConsole).IsColorful(needTerminalColor)
+	return GetLoggerWithConfig(conf)
+}
+
+func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
+	if Level(conf.Level) < DebugLevel || Level(conf.Level) > FatalLevel {
+		conf.Level = InfoLevel
 	}
 
-	filename = strings.TrimSpace(filename)
+	filename := strings.TrimSpace(conf.LogFile)
 
 	cfg := zap.NewProductionEncoderConfig()
-	//cfg.EncodeTime = zapcore.ISO8601TimeEncoder
-
 	cfg.EncodeTime = zapcore.TimeEncoderOfLayout(datetime.DATETIME_FORMATTER_Mill)
-	if needTerminalColor {
+	if conf.Colorful {
 		cfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	} else {
 		cfg.EncodeLevel = zapcore.CapitalLevelEncoder
@@ -95,7 +98,6 @@ func LoggerInstance(filename string, logLevel int8, needConsole bool, needTermin
 	syncers := make([]zapcore.WriteSyncer, 0, 10)
 
 	if len(filename) > 0 {
-		// fullname := path.Base(filename)                          // 获取不包含目录的文件名
 		file_suffix := path.Ext(filename)                         // 获取文件扩展名
 		filen_prefix := strings.TrimSuffix(filename, file_suffix) // 获取文件名称和路径, 不包含扩展名
 
@@ -106,7 +108,7 @@ func LoggerInstance(filename string, logLevel int8, needConsole bool, needTermin
 		syncers = append(syncers, zapcore.AddSync(logFile))
 	}
 
-	if needConsole {
+	if conf.ToConsole {
 		syncers = append(syncers, zapcore.AddSync(os.Stdout))
 	}
 
@@ -118,7 +120,7 @@ func LoggerInstance(filename string, logLevel int8, needConsole bool, needTermin
 
 	core := zapcore.NewCore(encoder, //NewJSONEncoder
 		writeSyncer,
-		zapcore.Level(logLevel))
+		zapcore.Level(zapcore.Level(conf.Level)))
 
 	log := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1)) // AddCaller() 显示文件名与行号; zap.AddCallerSkip(1)打印的文件名与行号在调用栈往外跳一层
 
