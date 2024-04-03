@@ -238,6 +238,8 @@ func (node *ENode) ToJson() string {
 
 ////////////////////////////////////////////////////////////////////
 
+// Efile(E文本)的具体格式 见 [电力系统数据标记语言: E语言规范]
+
 func GetENodeByPath(root *ENode, path string) (*ENode, error) {
 	path = strings.TrimSpace(path)
 
