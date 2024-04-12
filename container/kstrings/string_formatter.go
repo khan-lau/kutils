@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/khan-lau/kutils/container/kobjs"
-	"github.com/khan-lau/kutils/datetime"
 )
 
 const (
@@ -16,6 +15,12 @@ const (
 	DELIM_STOP  = '}'
 	DELIM_STR   = "{}"
 	ESCAPE_CHAR = '\\'
+)
+
+const (
+	DATETIME_FORMATTER          = "2006-01-02 15:04:05"
+	DATETIME_FORMATTER_Mill     = "2006-01-02 15:04:05.000"
+	DATETIME_TIMEZONE_FORMATTER = "2006-01-02 15:04:05 -0700"
 )
 
 type FormattingTuple struct {
@@ -40,6 +45,14 @@ func Println(messagePattern string, args ...any) {
 	fmt.Println(FormatString(messagePattern, args...))
 }
 
+func Print(messagePattern string, args ...any) {
+	Println(messagePattern, args...)
+}
+
+func Printf(messagePattern string, args ...any) {
+	fmt.Printf("%s", FormatString(messagePattern, args...))
+}
+
 func Debug(messagePattern string, args ...any) {
 	_, file, lineNo, _ := runtime.Caller(1)
 	pos := strings.LastIndex(file, "/")
@@ -47,11 +60,29 @@ func Debug(messagePattern string, args ...any) {
 		file = file[pos+1:]
 	}
 	d := FormatString("{}:{}", file, lineNo)
-	fmt.Printf("[%s] %s\t%s\n", time.Now().Format(datetime.DATETIME_FORMATTER_Mill), d, FormatString(messagePattern, args...))
+	fmt.Printf("[%s] %s\t%s\n", time.Now().Format(DATETIME_FORMATTER_Mill), d, FormatString(messagePattern, args...))
+}
+
+func Debugf(messagePattern string, args ...any) {
+	_, file, lineNo, _ := runtime.Caller(1)
+	pos := strings.LastIndex(file, "/")
+	if pos > -1 {
+		file = file[pos+1:]
+	}
+	d := FormatString("{}:{}", file, lineNo)
+	fmt.Printf("[%s] %s\t%s", time.Now().Format(DATETIME_FORMATTER_Mill), d, FormatString(messagePattern, args...))
 }
 
 func FormatString(messagePattern string, args ...any) string {
 	return SliceFormat(messagePattern, args...).Message()
+}
+
+func Sprintf(messagePattern string, args ...any) string {
+	return FormatString(messagePattern, args...)
+}
+
+func Errorf(messagePattern string, args ...any) error {
+	return fmt.Errorf("%s", FormatString(messagePattern, args...))
 }
 
 // @bref Performs single argument substitution for the 'messagePattern' passed as parameter.
