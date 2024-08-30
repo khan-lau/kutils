@@ -1,5 +1,9 @@
 package kslices
 
+import (
+	"strings"
+)
+
 // Equal reports whether two slices are equal: the same length and all
 // elements equal. If the lengths are different, Equal returns false.
 // Otherwise, the elements are compared in increasing index order, and the
@@ -51,8 +55,16 @@ func EqualFunc[E1, E2 any](s1 []E1, s2 []E2, eq func(E1, E2) bool) bool {
 	return true
 }
 
-// IndexFunc returns the first index i satisfying f(s[i]),
-// or -1 if none do.
+// IndexFunc 是一个泛型函数，用于在切片s中查找第一个满足函数f的元素，并返回其索引
+//
+// 参数:
+//
+//	@param E 是切片的元素类型，
+//	@param f 是一个接收E类型参数并返回bool值的函数
+//
+// 返回值:
+//
+//	@return int -1: 没有找到, >=0: 找到，返回索引值
 func IndexFunc[E any](s []E, f func(E) bool) int {
 	for i := range s {
 		if f(s[i]) {
@@ -219,4 +231,83 @@ func FilterFunc[T comparable](s []T, callback func(val T) bool) []T {
 		}
 	}
 	return slice
+}
+
+// StringItemHasPrefix 判断字符串切片 s 中是否存在以 prefix 为前缀的元素
+//
+// 参数：
+//
+//	@param s []string - 字符串切片
+//	@param prefix string - 前缀字符串
+//
+// 返回值：
+//
+//	@return bool - 如果 s 中存在以 prefix 为前缀的元素，则返回 true；否则返回 false
+func StringItemHasPrefix(s []string, prefix string) bool {
+	for _, item := range s {
+		if strings.HasPrefix(item, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// StringItemHasPrefix 判断字符串切片 s 中是否存在以 suffix 为后缀的元素
+//
+// 参数：
+//
+//	@param s []string - 字符串切片
+//	@param suffix string - 后缀字符串
+//
+// 返回值：
+//
+//	@return bool - 如果 s 中存在以 suffix 为后缀的元素，则返回 true；否则返回 false
+func StringItemHasSuffix(s []string, suffix string) bool {
+	for _, item := range s {
+		if strings.HasSuffix(item, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+// @bref SplitSliceByLimit 将切片s按照指定的长度limit进行分割，返回分割后的二维切片
+//
+// 参数：
+//
+//	@param s：待分割的切片
+//	@param limit：每个子切片的最大长度
+//
+// 返回值：
+//
+//	@return [][]T：分割后的二维切片
+//
+// 示例：
+//
+//	s := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+//	limit := 3
+//	result := SplitSliceByLimit(s, limit)
+//	fmt.Println(result) // 输出：[[1 2 3] [4 5 6] [7 8 9] [10]]
+func SplitSliceByLimit[T any](s []T, limit int) [][]T {
+	if len(s) <= 0 || limit <= 0 {
+		return [][]T{}
+	}
+
+	if limit >= len(s) {
+		return [][]T{s}
+	}
+
+	num := len(s) / limit
+	if len(s)%limit != 0 {
+		num++
+	}
+	result := make([][]T, 0, num)
+	for i := 0; i < len(s); i += limit {
+		end := i + limit
+		if end > len(s) {
+			end = len(s)
+		}
+		result = append(result, s[i:end])
+	}
+	return result
 }

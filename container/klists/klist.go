@@ -143,10 +143,35 @@ func (l *KList[E]) PushFront(v E) *KElement[E] {
 	return l.insertValue(v, &l.root)
 }
 
+func (l *KList[E]) PushFrontSlice(v ...E) *KElement[E] {
+	l.lazyInit()
+	if len(v) == 0 {
+		return nil
+	}
+	var ret *KElement[E]
+	for _, e := range v {
+		ret = l.insertValue(e, &l.root)
+	}
+	return ret
+}
+
 // PushBack inserts a new element e with value v at the back of list l and returns e.
 func (l *KList[E]) PushBack(v E) *KElement[E] {
 	l.lazyInit()
 	return l.insertValue(v, l.root.prev)
+}
+
+// PushBack inserts a new element e with value v at the back of list l and returns e.
+func (l *KList[E]) PushBackSlice(v ...E) *KElement[E] {
+	l.lazyInit()
+	if len(v) == 0 {
+		return nil
+	}
+	var ret *KElement[E]
+	for _, e := range v {
+		l.insertValue(e, l.root.prev)
+	}
+	return ret
 }
 
 // InsertBefore inserts a new element e with value v immediately before mark and returns e.

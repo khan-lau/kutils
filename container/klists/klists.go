@@ -43,3 +43,42 @@ func FilterFunc[T comparable](l *KList[T], callback func(v T) bool) *KList[T] {
 	}
 	return nl
 }
+
+// splitKList 将传入的KList类型的切片l按照给定的limit进行拆分，返回拆分后的结果
+//
+// 参数：
+//
+//	l *klists.KList[T] - 待拆分的KList类型的切片
+//	limit int - 拆分后每个子切片的最大长度
+//
+// 返回值：
+//
+//	[]T - 拆分后的结果切片
+func SplitKList[T comparable](l *KList[T], limit int) [][]T {
+	len := l.Len()
+
+	if limit <= 0 || len <= 0 {
+		return [][]T{}
+	}
+
+	if len <= limit {
+		return [][]T{ToKSlice(l)}
+	} else {
+		num := len / limit
+		if len%limit != 0 {
+			num += 1
+		}
+		result := make([][]T, num)
+		idx := 0
+		for iter := l.Front(); iter != nil; iter = iter.Next() {
+			val := iter.Value
+			offset := idx / limit
+			if result[offset] == nil {
+				result[offset] = make([]T, 0, limit)
+			}
+			result[offset] = append(result[offset], val)
+			idx++
+		}
+		return result
+	}
+}
