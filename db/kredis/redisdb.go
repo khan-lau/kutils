@@ -123,6 +123,74 @@ func (mr *KRedis) Ping() bool {
 	return nil == err
 }
 
+func (mr *KRedis) ScanMatch(limit int, aboutTypes []string, ignoreKeys []string, includeKeys []string, needDel bool, logf logger.AppLogFunc) ([]*RedisRecord, error) {
+	cursor := uint64(0)
+	allKeys := make([]string, 0, 50000)
+
+	count := 0
+	for {
+		var keys []string
+		err := error(nil)
+		keys, cursor, err = mr.Client.Scan(mr.ctx, cursor, "", int64(limit)).Result()
+		if nil != err {
+			return nil, err
+		}
+
+		count += len(keys)
+		// logf(logger.InfoLevel, "scan %d keys, limit: %d, cursor: %d", count, limit, cursor)
+		allKeys = append(allKeys, keys...)
+		if cursor == 0 {
+			// 扫描完成
+			break
+		}
+	}
+
+	dataList := make([]*RedisRecord, 0, limit)
+	for _, key := range allKeys {
+		// 黑名单过滤, 以对应关键字的key被过滤掉, 支持(pattern*, *pattern, pattern) 三种格式的匹配规则
+		if MatchFilter(ignoreKeys, key) {
+			continue
+		}
+
+		// logf(logger.InfoLevel, "idx: %d, filter ignore key:%s, type:%s", idx, key)
+
+		// 如果有白名单, 则启用白名单规则, 不在白名单的被过滤掉, 白名单优先级低于黑名单, 支持(pattern*, *pattern, pattern) 三种格式的匹配规则
+		if len(includeKeys) > 0 {
+			if !MatchFilter(includeKeys, key) {
+				continue
+			}
+		}
+
+		dataType, err := mr.Type(key)
+		if nil != err {
+			return nil, err
+		}
+
+		// if key == "windRtEvent:DTNXJK:HSBFC:Q1:W009" {
+		// 	logf(logger.InfoLevel, "key:%s, type:%s", key, dataType)
+		// }
+
+		// logf(logger.InfoLevel, "idx: %d, key:%s, type:%s", idx, key, dataType)
+		if !kslices.Contains(aboutTypes, strings.ToLower(dataType)) { //过滤出需要的数据类型
+			continue
+		}
+
+		ttl, err := mr.PTTL(key)
+		if nil != err {
+			return nil, err
+		}
+
+		data, err := mr.Dump(key)
+		if nil != err {
+			return nil, err
+		}
+
+		dataList = append(dataList, &RedisRecord{Key: key, PTtl: ttl, DataType: dataType, Data: data})
+	}
+
+	return dataList, nil
+}
+
 func (mr *KRedis) Scan(limit int, aboutTypes []string, ignoreKeys []string, includeKeys []string, needDel bool, logf logger.AppLogFunc) ([]*RedisRecord, error) {
 	cursor := uint64(0)
 	allKeys := make([]string, 0, 50000)
@@ -310,4 +378,23 @@ func (mr *KRedis) Stop() {
 	// mr.CancelSubscribe()
 	mr.cancel()
 	mr.Client.Close()
+}
+
+////////////////////////////////////
+
+func MatchFilter(patterns []string, key string) bool {
+	blacklistIndex := kslices.IndexFunc(patterns, func(item string) bool {
+		length := len(item)
+		if length == 0 || len(key) == 0 {
+			return false
+		}
+		if item[:1] == "*" {
+			return strings.HasSuffix(key, item)
+		} else if item[length-1:] == "*" {
+			return strings.HasPrefix(key, item[0:length-1])
+		} else {
+			return key == item
+		}
+	})
+	return blacklistIndex >= 0
 }
