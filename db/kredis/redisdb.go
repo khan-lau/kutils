@@ -389,7 +389,7 @@ func MatchFilter(patterns []string, key string) bool {
 			return false
 		}
 		if item[:1] == "*" {
-			return strings.HasSuffix(key, item)
+			return strings.HasSuffix(key, item[1:length])
 		} else if item[length-1:] == "*" {
 			return strings.HasPrefix(key, item[0:length-1])
 		} else {
