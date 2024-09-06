@@ -17,6 +17,7 @@ var (
 
 func init() {
 	glog = logger.LoggerInstanceOnlyConsole(int8(logger.DebugLevel))
+	// glog = logger.LoggerInstance("aa.log", int8(logger.DebugLevel), true, true)
 }
 
 func TestStringParams(t *testing.T) {

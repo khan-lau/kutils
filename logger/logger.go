@@ -101,14 +101,22 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 		file_suffix := path.Ext(filename)                         // 获取文件扩展名
 		filen_prefix := strings.TrimSuffix(filename, file_suffix) // 获取文件名称和路径, 不包含扩展名
 
+		if conf.MaxAge == 0 {
+			conf.MaxAge = 3 * 24 // 默认最长保存3天
+		}
+		if conf.RotationTime == 0 {
+			conf.RotationTime = 24 // 默认24小时滚动一次
+		}
+
 		logFile, _ := rotatelogs.New(filen_prefix+".%Y%m%d%H%M"+file_suffix,
-			rotatelogs.WithMaxAge(30*24*time.Hour),    // 最长保存30天
-			rotatelogs.WithRotationTime(time.Hour*24)) // 24小时切割一次
+			rotatelogs.WithMaxAge(time.Duration(conf.MaxAge)*time.Hour),             // 最长保存30天
+			rotatelogs.WithRotationTime(time.Duration(conf.RotationTime)*time.Hour)) // 24小时切割一次
 
 		syncers = append(syncers, zapcore.AddSync(logFile))
 	}
 
 	if conf.ToConsole {
+		// os.Stdout.Fd() == syscall.Stdin
 		syncers = append(syncers, zapcore.AddSync(os.Stdout))
 	}
 
