@@ -345,6 +345,37 @@ func (mr *KRedis) Subscribe(timeout int, callback func(err error, topic string, 
 	}()
 }
 
+// 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; chanSize 最大允许队列大小, 如果< 100, 则为100; callback为接收消息的回调函数; topics为需要订阅的topic
+func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback func(err error, topic string, payload interface{}), topics ...string) {
+	go func() {
+		pubsub := mr.Client.PSubscribe(mr.ctx, topics...)
+		// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
+		defer pubsub.Close()
+		if chanSize < 100 {
+			chanSize = 100
+		}
+		ch := pubsub.Channel(redisHd.WithChannelSize(chanSize), redisHd.WithChannelHealthCheckInterval(time.Second*30))
+	forEnd: //这个标签
+		for {
+			select {
+			case message, ok := <-ch:
+				if !ok {
+					go callback(errors.New("channel be closed"), message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+				} else {
+					go callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+				}
+			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞，那么select也会检测其他case条件，检测到后timeout指定毫秒超时
+				continue
+			case <-mr.ctx.Done():
+				break forEnd
+
+			}
+		}
+
+		callback(errors.New("func UnSubscribe be called"), "", nil)
+	}()
+}
+
 // 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) PSubscribe(timeout int, callback func(err error, topic string, payload interface{}), topics ...string) {
 	go func() {
