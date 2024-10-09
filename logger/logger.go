@@ -38,6 +38,7 @@ const (
 )
 
 type AppLogFunc func(lvl Level, f string, args ...interface{})
+type AppLogFuncWithTag func(lvl Level, tag string, f string, args ...interface{})
 
 func (l Level) String() string {
 	switch l {
