@@ -105,8 +105,13 @@ func objectToJson5(key string, obj interface{}, sb *strings.Builder, needExportF
 	}
 	var ptr *reflect.Value
 	if ptr == nil {
-		tmpNewVal := reflect.New(val.Type()) // 根据val的类型, 新建一个ptr类型的Value
-		ptr = &tmpNewVal
+		if val == reflect.ValueOf(nil) {
+			sb.WriteString(fmt.Sprintf("%v", "null"))
+			return
+		} else {
+			tmpNewVal := reflect.New(val.Type()) // 根据val的类型, 新建一个ptr类型的Value
+			ptr = &tmpNewVal
+		}
 	}
 	switch val.Kind() {
 	case reflect.Struct:
@@ -296,8 +301,13 @@ func objectDump(key string, obj interface{}, sb *strings.Builder, needExportFunc
 	}
 	var ptr *reflect.Value
 	if ptr == nil {
-		tmpNewVal := reflect.New(val.Type()) // 根据val的类型, 新建一个ptr类型的Value
-		ptr = &tmpNewVal
+		if val == reflect.ValueOf(nil) {
+			sb.WriteString(fmt.Sprintf("%v", "null"))
+			return
+		} else {
+			tmpNewVal := reflect.New(val.Type()) // 根据val的类型, 新建一个ptr类型的Value
+			ptr = &tmpNewVal
+		}
 	}
 	switch val.Kind() {
 	case reflect.Struct:
