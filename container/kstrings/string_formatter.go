@@ -23,10 +23,15 @@ const (
 	DATETIME_TIMEZONE_FORMATTER = "2006-01-02 15:04:05 -0700"
 )
 
+var (
+	ErrSampleString = fmt.Errorf("%s", "sample string")
+)
+
 type FormattingTuple struct {
 	message   string
 	throwable error
 	args      []any
+	// oriArgs   []any
 }
 
 func NewFormattingTuple(message string, args []any, throwable error) *FormattingTuple {
@@ -74,7 +79,11 @@ func Debugf(messagePattern string, args ...any) {
 }
 
 func FormatString(messagePattern string, args ...any) string {
-	return SliceFormat(messagePattern, args...).Message()
+	tuple := SliceFormat(messagePattern, args...)
+	if tuple.throwable == ErrSampleString {
+		return fmt.Sprintf(tuple.Message(), tuple.Args()...)
+	}
+	return tuple.Message()
 }
 
 func Sprintf(messagePattern string, args ...any) string {
@@ -148,7 +157,7 @@ func ArrayFormatWithError(messagePattern string, argArray []any, throwable error
 		j = IndexOf(messagePattern, DELIM_STR, i)
 		if j == -1 { // index i 之后 未发现参数替代符`{}`
 			if i == 0 { // 普通字符串
-				return NewFormattingTuple(messagePattern, argArray, fmt.Errorf("%s", "sample string"))
+				return NewFormattingTuple(messagePattern, argArray, ErrSampleString)
 			} else { // add the tail string which contains no variables and return the result.
 				sbuf.WriteString(messagePattern[i:])
 				return NewFormattingTuple(sbuf.String(), argArray, throwable)
