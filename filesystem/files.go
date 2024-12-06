@@ -86,3 +86,37 @@ func ReadLinesWithBufferSize(filePath string, bufferSize int) (*klists.KList[str
 
 	return lineList, nil
 }
+
+// @bref ReadLineFromLargeFile 从指定文件路径读取文件内容，并按行处理
+//
+// 参数：
+//
+//	@param filePath: 要读取的文件路径
+//	@param callback: 每读取一行后调用的回调函数，参数为读取的行内容和错误对象
+//
+// 返回值：
+//
+//	@return error: 如果文件打开失败或读取文件时出现错误，则返回错误信息；否则返回nil
+func ReadLineFromLargeFile(filePath string, callback func(line string, err error)) error {
+	// 打开文件
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	bufferSize := 1024
+	reader := bufio.NewReaderSize(file, bufferSize) //缓冲区4k
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil && len(line) < 1 {
+			callback("", err)
+			break
+		}
+		if callback != nil {
+			callback(line, nil)
+		}
+	}
+
+	return nil
+}
