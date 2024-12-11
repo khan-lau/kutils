@@ -97,7 +97,7 @@ func ReadLinesWithBufferSize(filePath string, bufferSize int) (*klists.KList[str
 // 返回值：
 //
 //	@return error: 如果文件打开失败或读取文件时出现错误，则返回错误信息；否则返回nil
-func ReadLineFromLargeFile(filePath string, callback func(line string, err error)) error {
+func ReadLineFromLargeFile(filePath string, callback func(line string, err error) error) error {
 	// 打开文件
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -110,11 +110,16 @@ func ReadLineFromLargeFile(filePath string, callback func(line string, err error
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil && len(line) < 1 {
-			callback("", err)
+			if callback != nil {
+				callback("", err)
+			}
 			break
 		}
 		if callback != nil {
-			callback(line, nil)
+			err := callback(line, nil)
+			if err != nil {
+				break
+			}
 		}
 	}
 
