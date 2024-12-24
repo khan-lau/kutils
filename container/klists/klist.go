@@ -276,6 +276,18 @@ func (l *KList[E]) FindIf(callback func(v E) bool) *E {
 	return nil
 }
 
+func (l *KList[E]) FindAllIf(callback func(v E) bool) []E {
+	var next *KElement[E]
+	result := make([]E, 0, l.Len())
+	for e := l.Front(); e != nil; e = next {
+		next = e.Next()
+		if nil != callback && callback(e.Value) {
+			result = append(result, e.Value)
+		}
+	}
+	return result
+}
+
 func (l *KList[E]) PopIf(callback func(v E) bool) *E {
 	var next *KElement[E]
 	for e := l.Front(); e != nil; e = next {
@@ -287,6 +299,19 @@ func (l *KList[E]) PopIf(callback func(v E) bool) *E {
 		}
 	}
 	return nil
+}
+
+func (l *KList[E]) PopAllIf(callback func(v E) bool) []E {
+	result := make([]E, 0, l.Len())
+	var next *KElement[E]
+	for e := l.Front(); e != nil; e = next {
+		next = e.Next()
+		if nil != callback && callback(e.Value) {
+			result = append(result, e.Value)
+			l.Remove(e)
+		}
+	}
+	return result
 }
 
 func (l *KList[E]) PopFront() *E {
