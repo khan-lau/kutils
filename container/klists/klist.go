@@ -315,7 +315,12 @@ func (l *KList[E]) PopAllIf(callback func(v E) bool) []E {
 }
 
 func (l *KList[E]) PopFront() *E {
-	result := l.Remove(l.Front())
+	front := l.Front()
+	if nil == front {
+		return nil
+	}
+
+	result := l.Remove(front)
 	return &result
 	// iter := l.Front()
 	// if nil == iter {
@@ -327,7 +332,12 @@ func (l *KList[E]) PopFront() *E {
 }
 
 func (l *KList[E]) PopBack() *E {
-	result := l.Remove(l.Back())
+	back := l.Back()
+	if nil == back {
+		return nil
+	}
+
+	result := l.Remove(back)
 	return &result
 
 	// iter := l.Back()
