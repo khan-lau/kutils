@@ -2,6 +2,9 @@ package knumber
 
 // ToInt 将任意类型转换为int，转换失败返回0和false。
 func ToInt(val interface{}) (int, bool) {
+	if val == nil {
+		return 0, false
+	}
 	switch v := val.(type) {
 	case int:
 		return v, true
@@ -34,6 +37,9 @@ func ToInt(val interface{}) (int, bool) {
 
 // ToInt8 将任意类型转换为int8，转换失败返回0和false。
 func ToInt8(val interface{}) (int8, bool) {
+	if val == nil {
+		return 0, false
+	}
 	switch v := val.(type) {
 	case int:
 		return int8(v), true
@@ -66,6 +72,9 @@ func ToInt8(val interface{}) (int8, bool) {
 
 // ToInt16 将任意类型转换为int16，转换失败返回0和false。
 func ToInt16(val interface{}) (int16, bool) {
+	if val == nil {
+		return 0, false
+	}
 	switch v := val.(type) {
 	case int:
 		return int16(v), true
@@ -98,6 +107,9 @@ func ToInt16(val interface{}) (int16, bool) {
 
 // ToInt32 将任意类型转换为int32，转换失败返回0和false。
 func ToInt32(val interface{}) (int32, bool) {
+	if val == nil {
+		return 0, false
+	}
 	switch v := val.(type) {
 	case int:
 		return int32(v), true
@@ -130,6 +142,9 @@ func ToInt32(val interface{}) (int32, bool) {
 
 // ToInt64 将任意类型转换为int64，转换失败返回0和false。
 func ToInt64(val interface{}) (int64, bool) {
+	if val == nil {
+		return 0, false
+	}
 	switch v := val.(type) {
 	case int:
 		return int64(v), true
@@ -162,6 +177,9 @@ func ToInt64(val interface{}) (int64, bool) {
 
 // ToUint 将任意类型转换为uint，转换失败返回0和false。
 func ToUint(val interface{}) (uint, bool) {
+	if val == nil {
+		return 0, false
+	}
 	switch v := val.(type) {
 	case int:
 		return uint(v), true
@@ -194,6 +212,9 @@ func ToUint(val interface{}) (uint, bool) {
 
 // ToUint8 将任意类型转换为uint8，转换失败返回0和false。
 func ToUint8(val interface{}) (uint8, bool) {
+	if val == nil {
+		return 0, false
+	}
 	switch v := val.(type) {
 	case int:
 		return uint8(v), true
@@ -226,6 +247,9 @@ func ToUint8(val interface{}) (uint8, bool) {
 
 // ToUint16 将任意类型转换为uint16，转换失败返回0和false。
 func ToUint16(val interface{}) (uint16, bool) {
+	if val == nil {
+		return 0, false
+	}
 	switch v := val.(type) {
 	case int:
 		return uint16(v), true
@@ -258,6 +282,9 @@ func ToUint16(val interface{}) (uint16, bool) {
 
 // ToUint32 将任意类型转换为uint32，转换失败返回0和false。
 func ToUint32(val interface{}) (uint32, bool) {
+	if val == nil {
+		return 0, false
+	}
 	switch v := val.(type) {
 	case int:
 		return uint32(v), true
@@ -290,6 +317,9 @@ func ToUint32(val interface{}) (uint32, bool) {
 
 // ToUint64 将任意类型转换为uint64，转换失败返回0和false。
 func ToUint64(val interface{}) (uint64, bool) {
+	if val == nil {
+		return 0, false
+	}
 	switch v := val.(type) {
 	case int:
 		return uint64(v), true

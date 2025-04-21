@@ -19,6 +19,9 @@ func EqualF32(a, b float32) bool {
 
 // any 数字类型 转 float32
 func ToFloat32(val interface{}) (float32, bool) {
+	if val == nil {
+		return 0, false
+	}
 	switch v := val.(type) {
 	case float32:
 		return v, true
@@ -50,8 +53,10 @@ func ToFloat32(val interface{}) (float32, bool) {
 
 // any 数字类型 转 float64
 func ToFloat64(val interface{}) (float64, bool) {
+	if val == nil {
+		return 0, false
+	}
 	switch v := val.(type) {
-
 	case float32:
 		return float64(v), true
 	case float64:
