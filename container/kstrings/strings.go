@@ -1,6 +1,7 @@
 package kstrings
 
 import (
+	"strconv"
 	"strings"
 )
 
@@ -35,48 +36,62 @@ func TrimSpace(str string) string {
 	return strings.Trim(str, "\x00 \b\t\n\r")
 }
 
-// func FormatJson5(json5str string) (string, error) {
-// 	trimStr := TrimSpace(json5str)
-// 	ident := "  "
+func ToFloat32(str string) (float32, error) {
+	ret, err := strconv.ParseFloat(str, 32)
+	return float32(ret), err
+}
 
-// 	first := trimStr[:1]
-// 	if first != "[" && first != "{" {
-// 		return "", fmt.Errorf("first charset must be '[' or '{'")
-// 	}
+func ToFloat64(str string) (float64, error) {
+	return strconv.ParseFloat(str, 64)
+}
 
-// 	var sb strings.Builder
+func ToInt(str string) (int, error) {
+	return strconv.Atoi(str)
+}
 
-// 	tok := klists.New[string]()
-// 	tok.PushBack(first)
-// 	sb.WriteString(FormatString("{}\n{}", first, strings.Repeat(ident, 1)))
-// 	trimStr = trimStr[1:]
+func ToInt8(str string) (int8, error) {
+	ret, err := strconv.ParseInt(str, 10, 8)
+	return int8(ret), err
+}
 
-// 	pos := strings.IndexAny(trimStr, "[{")
-// 	sub := ""
+func ToInt16(str string) (int16, error) {
+	ret, err := strconv.ParseInt(str, 10, 16)
+	return int16(ret), err
+}
 
-// 	length := len(trimStr)
-// 	remain := length
+func ToInt32(str string) (int32, error) {
+	ret, err := strconv.ParseInt(str, 10, 32)
+	return int32(ret), err
+}
 
-// 	for remain < 1 {
-// 		// 取字段名
-// 		pos := strings.IndexAny(trimStr, ":")
-// 		if pos > -1 {
-// 			key := trimStr[:pos]
-// 			key = TrimSpace(key)
-// 			sb.WriteString(FormatString("{} : {}", strings.Repeat(ident, tok.Len()), key))
-// 			remain = remain - (pos + 1)
-// 			trimStr = trimStr[(pos + 1):] // `:`后的内容
+func ToInt64(str string) (int64, error) {
+	return strconv.ParseInt(str, 10, 64)
+}
 
-// 			// 判断`,`前有没有`"` 或`'` 字符串起止符, 要排除 \' \" 转义符
-// 		}
-// 	}
+func ToUint(str string) (uint, error) {
+	ret, err := strconv.ParseUint(str, 10, 32)
+	return uint(ret), err
+}
 
-// 	if pos != -1 {
-// 		sub = trimStr[:pos+1]
-// 		trimStr = trimStr[(pos + 1):]
-// 		tok.PushBack(sub)
-// 	}
+func ToUint8(str string) (uint8, error) {
+	ret, err := strconv.ParseUint(str, 10, 8)
+	return uint8(ret), err
+}
 
-// 	Println("pos:{}, sub:{}", pos, sub)
-// 	return sb.String(), nil
-// }
+func ToUint16(str string) (uint16, error) {
+	ret, err := strconv.ParseUint(str, 10, 16)
+	return uint16(ret), err
+}
+
+func ToUint32(str string) (uint32, error) {
+	ret, err := strconv.ParseUint(str, 10, 32)
+	return uint32(ret), err
+}
+
+func ToUint64(str string) (uint64, error) {
+	return strconv.ParseUint(str, 10, 64)
+}
+
+func ToBool(str string) (bool, error) {
+	return strconv.ParseBool(str)
+}
