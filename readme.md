@@ -1,5 +1,17 @@
 # KUtils v0.2.3
 
+## knumber
+interface{} 数字类型 to float32 float64 int int8 int16 int32 int64 uint uint8 uint16 uint32 uint64
+
+```go
+anymap := make(map[string]interface{})
+anymap["key0"] = 10
+
+if val0, ok := kunumber.ToInt32(10); ok{ // 返回 int32
+	kstrings.Println("int32 val0:{}", val0)
+}
+```
+
 ## kuuid 
 实现uuidV1 
 
