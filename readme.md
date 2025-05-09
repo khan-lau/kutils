@@ -250,7 +250,7 @@ chacha20算法 加密解密
 ### kredis
 基于`go-redis/v9`的一些简单封装
 
-## logger
+## klogger
 基于zap 与 file-rotatelogs 的日志库简单封装
 
 ```go
