@@ -7,7 +7,7 @@ interface{} 数字类型 to float32 float64 int int8 int16 int32 int64 uint uint
 anymap := make(map[string]interface{})
 anymap["key0"] = 10
 
-if val0, ok := kunumber.ToInt32(10); ok{ // 返回 int32
+if val0, ok := kunumber.ToInt32(anymap["key0"]); ok{ // 返回 int32
 	kstrings.Println("int32 val0:{}", val0)
 }
 ```
