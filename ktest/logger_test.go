@@ -8,15 +8,15 @@ import (
 	"github.com/khan-lau/kutils/container/klists"
 	"github.com/khan-lau/kutils/container/kobjs"
 	"github.com/khan-lau/kutils/container/kstrings"
-	"github.com/khan-lau/kutils/logger"
+	"github.com/khan-lau/kutils/klogger"
 )
 
 var (
-	glog *logger.Logger
+	glog *klogger.Logger
 )
 
 func init() {
-	glog = logger.LoggerInstanceOnlyConsole(int8(logger.DebugLevel))
+	glog = klogger.LoggerInstanceOnlyConsole(int8(klogger.DebugLevel))
 	// glog = logger.LoggerInstance("aa.log", int8(logger.DebugLevel), true, true)
 }
 
@@ -62,7 +62,7 @@ func Test_Param(t *testing.T) {
 }
 
 func TestLog(t *testing.T) {
-	logger := logger.LoggerInstanceOnlyConsole(-1)
+	logger := klogger.LoggerInstanceOnlyConsole(-1)
 
 	logger.D("fuck off")
 	logger.D("{} fuck off", "maybe")

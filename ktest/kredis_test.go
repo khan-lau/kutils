@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/khan-lau/kutils/db/kredis"
-	"github.com/khan-lau/kutils/logger"
+	"github.com/khan-lau/kutils/klogger"
 )
 
 var (
 	redisHd *kredis.KRedis
-	klog    *logger.Logger
+	klog    *klogger.Logger
 )
 
 func init() {
@@ -80,25 +80,25 @@ func Test_RedisScanMatch(t *testing.T) {
 	}
 }
 
-func LogFunc(lvl logger.Level, f string, args ...interface{}) {
+func LogFunc(lvl klogger.Level, f string, args ...interface{}) {
 	if nil == klog {
-		klog = logger.LoggerInstanceOnlyConsole(int8(logger.DebugLevel))
+		klog = klogger.LoggerInstanceOnlyConsole(int8(klogger.DebugLevel))
 		klog.Warrn("Not init logger")
 	}
 	skip := 1
 
 	switch lvl {
-	case logger.DebugLevel:
+	case klogger.DebugLevel:
 		klog.KDebug(skip, f, args...)
-	case logger.InfoLevel:
+	case klogger.InfoLevel:
 		klog.KInfo(skip, f, args...)
-	case logger.WarnLevel:
+	case klogger.WarnLevel:
 		klog.KWarrn(skip, f, args...)
-	case logger.ErrorLevel:
+	case klogger.ErrorLevel:
 		klog.KError(skip, f, args...)
-	case logger.DPanicLevel:
+	case klogger.DPanicLevel:
 		klog.KDPanic(skip, f, args...)
-	case logger.FatalLevel:
+	case klogger.FatalLevel:
 		klog.KFatal(skip, f, args...)
 	default:
 		klog.KInfo(skip, fmt.Sprintf(lvl.String()+": "+f), args)
