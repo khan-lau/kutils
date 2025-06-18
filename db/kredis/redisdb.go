@@ -46,15 +46,15 @@ func NewKRedis(ctx context.Context, host string, port int, user string, password
 	return &KRedis{Client: client, ctx: subCtx, cancel: subCancel}
 }
 
-// 判断某个key是否存在
-func (mr *KRedis) Exist(key string) (bool, error) {
-	_, err := mr.Client.Get(mr.ctx, key).Result()
+// 执行指令
+func (mr *KRedis) Do(args ...interface{}) (interface{}, error) {
+	val, err := mr.Client.Do(mr.ctx, args...).Result()
 	if err == redisHd.Nil {
-		return false, nil
+		return nil, nil
 	} else if err != nil {
-		return false, err
+		return nil, err
 	}
-	return true, nil
+	return val, nil
 }
 
 // 获取一个key的值
@@ -66,6 +66,263 @@ func (mr *KRedis) Get(key string) (interface{}, error) {
 		return nil, err
 	}
 	return val, nil
+}
+
+// 设置某个key的值, 并指定ttl
+func (mr *KRedis) Set(key string, value interface{}, duration time.Duration) (bool, error) {
+	err := mr.Client.Set(mr.ctx, key, value, duration).Err()
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// 判断某个key是否存在
+func (mr *KRedis) Exist(key string) (bool, error) {
+	_, err := mr.Client.Get(mr.ctx, key).Result()
+	if err == redisHd.Nil {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// 获取一个key的hash字段的值
+func (that *KRedis) HGet(key string, field string) (interface{}, error) {
+	val, err := that.Client.HGet(that.ctx, key, field).Result()
+	if err == redisHd.Nil {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return val, nil
+}
+
+// 设置一个key的hash字段的值
+func (that *KRedis) HSet(key string, field string, value interface{}) error {
+	err := that.Client.HSet(that.ctx, key, field, value).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// 获取一个key的hash字段的值列表
+func (that *KRedis) HGetAll(key string) (map[string]string, error) {
+	valMap, err := that.Client.HGetAll(that.ctx, key).Result()
+	if err == redisHd.Nil {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return valMap, nil
+}
+
+// 设置一个key的hash字段的值列表
+func (that *KRedis) HSetAll(key string, fields map[string]interface{}) error {
+	err := that.Client.HSet(that.ctx, key, fields).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// 判断一个key的hash字段是否存在
+func (that *KRedis) HExists(key string, field string) (bool, error) {
+	isExists, err := that.Client.HExists(that.ctx, key, field).Result()
+	if nil != err {
+		return false, err
+	}
+	return isExists, nil
+}
+
+// 获取一个key的hash字段的数量
+func (that *KRedis) HLen(key string) (int64, error) {
+	val, err := that.Client.HLen(that.ctx, key).Result()
+	if nil != err {
+		return 0, err
+	}
+	return val, nil
+}
+
+// 获取一个key的hash字段的所有Key
+func (that *KRedis) HKeys(ctx context.Context, key string) ([]string, error) {
+	array, err := that.Client.HKeys(ctx, key).Result()
+	if nil != err {
+		return nil, err
+	}
+	return array, nil
+}
+
+// 获取一个key的hash字段的所有值
+func (that *KRedis) HVals(ctx context.Context, key string) ([]string, error) {
+	array, err := that.Client.HVals(ctx, key).Result()
+	if nil != err {
+		return nil, err
+	}
+	return array, nil
+}
+
+// 设置一个key的hash字段的值列表, 如果不存在则创建
+func (that *KRedis) HSetNX(ctx context.Context, key, field string, value interface{}) (bool, error) {
+	isExists, err := that.Client.HSetNX(ctx, key, field, value).Result()
+	if nil != err {
+		return false, err
+	}
+	return isExists, nil
+}
+
+// 删除一个key的hash字段的值列表
+func (that *KRedis) HDel(key string, fields []string) error {
+	_, err := that.Client.HDel(that.ctx, key, fields...).Result()
+	if nil != err {
+		return err
+	}
+	return nil
+}
+
+// 获取一个key的hash字段的值列表
+func (that *KRedis) HMGet(key string, fields []string) ([]interface{}, error) {
+	valMap, err := that.Client.HMGet(that.ctx, key, fields...).Result()
+	if err == redisHd.Nil {
+		return nil, nil
+	} else if nil != err {
+		return nil, err
+	}
+	return valMap, nil
+}
+
+// 设置一个key的hash字段的值列表, 如果不存在则创建
+func (that *KRedis) HMSet(key string, fields map[string]interface{}) error {
+	err := that.Client.HMSet(that.ctx, key, fields).Err()
+	if nil != err {
+		return err
+	}
+	return nil
+}
+
+// 从列表左边插入数据
+func (that *KRedis) LPush(key string, values ...interface{}) (int64, error) {
+	return that.Client.LPush(that.ctx, key, values...).Result()
+}
+
+// 从列表左边插入数据, 如果不存在则不插入数据
+func (that *KRedis) LPushX(key string, values ...interface{}) (int64, error) {
+	return that.Client.LPushX(that.ctx, key, values...).Result()
+}
+
+// 从列表右边插入数据
+func (that *KRedis) RPush(key string, values ...interface{}) (int64, error) {
+	return that.Client.RPush(that.ctx, key, values...).Result()
+}
+
+// 从列表右边插入数据, 如果不存在则不插入数据
+func (that *KRedis) RPushX(key string, values ...interface{}) (int64, error) {
+	return that.Client.RPushX(that.ctx, key, values...).Result()
+}
+
+// 从列表左边弹出数据
+func (that *KRedis) LPop(key string) (string, error) {
+	return that.Client.LPop(that.ctx, key).Result()
+}
+
+// 从列表右边弹出数据
+func (that *KRedis) RPop(key string) (string, error) {
+	return that.Client.RPop(that.ctx, key).Result()
+}
+
+// 返回列表的一个范围内的数据，也可以返回全部数据
+func (that *KRedis) LRange(key string, start int64, stop int64) ([]string, error) {
+	return that.Client.LRange(that.ctx, key, start, stop).Result()
+}
+
+// 返回列表的大小
+func (that *KRedis) LLen(key string) (int64, error) {
+	return that.Client.LLen(that.ctx, key).Result()
+}
+
+func (that *KRedis) LTrim(key string, start int64, stop int64) error {
+	return that.Client.LTrim(that.ctx, key, start, stop).Err()
+}
+
+func (that *KRedis) LSet(key string, index int64, value interface{}) error {
+	return that.Client.LSet(that.ctx, key, index, value).Err()
+}
+
+// 删除列表中的数据
+func (that *KRedis) LRem(key string, count int64, value interface{}) (int64, error) {
+	return that.Client.LRem(that.ctx, key, count, value).Result()
+}
+
+// 根据索引坐标，查询列表中的数据
+func (that *KRedis) LIndex(key string, index int64) (string, error) {
+	return that.Client.LIndex(that.ctx, key, index).Result()
+}
+
+// 在指定位置插入数据，在头部插入用"before"，尾部插入用"after"
+func (that *KRedis) LInsert(key string, position string, pivot interface{}, value interface{}) (int64, error) {
+	return that.Client.LInsert(that.ctx, key, position, pivot, value).Result()
+}
+
+func (that *KRedis) SAdd(key string, members ...interface{}) (int64, error) {
+	return that.Client.SAdd(that.ctx, key, members...).Result()
+}
+
+func (that *KRedis) SMembers(key string) ([]string, error) {
+	return that.Client.SMembers(that.ctx, key).Result()
+}
+
+func (that *KRedis) SRem(key string, members ...interface{}) (int64, error) {
+	return that.Client.SRem(that.ctx, key, members...).Result()
+}
+
+func (that *KRedis) SIsMember(key string, member interface{}) (bool, error) {
+	return that.Client.SIsMember(that.ctx, key, member).Result()
+}
+
+func (that *KRedis) SCard(key string) (int64, error) {
+	return that.Client.SCard(that.ctx, key).Result()
+}
+
+func (that *KRedis) SPop(key string) (string, error) {
+	return that.Client.SPop(that.ctx, key).Result()
+}
+
+func (that *KRedis) SPopN(key string, count int64) ([]string, error) {
+	return that.Client.SPopN(that.ctx, key, count).Result()
+}
+
+func (that *KRedis) SUnion(keys ...string) ([]string, error) {
+	return that.Client.SUnion(that.ctx, keys...).Result()
+}
+
+func (that *KRedis) SUnionStore(destKey string, keys ...string) (int64, error) {
+	return that.Client.SUnionStore(that.ctx, destKey, keys...).Result()
+}
+
+func (that *KRedis) SInter(keys ...string) ([]string, error) {
+	return that.Client.SInter(that.ctx, keys...).Result()
+}
+
+func (that *KRedis) SInterStore(destKey string, keys ...string) (int64, error) {
+	return that.Client.SInterStore(that.ctx, destKey, keys...).Result()
+}
+
+func (that *KRedis) SDiff(keys ...string) ([]string, error) {
+	return that.Client.SDiff(that.ctx, keys...).Result()
+}
+
+func (that *KRedis) SDiffStore(destKey string, keys ...string) (int64, error) {
+	return that.Client.SDiffStore(that.ctx, destKey, keys...).Result()
+}
+
+func (that *KRedis) SMove(source, destination string, member interface{}) (bool, error) {
+	return that.Client.SMove(that.ctx, source, destination, member).Result()
+}
+
+func (that *KRedis) SRandMember(key string) (string, error) {
+	return that.Client.SRandMember(that.ctx, key).Result()
 }
 
 // 获取一个key的数据类型, 数据类型全小写
@@ -101,15 +358,6 @@ func (mr *KRedis) RestoreReplace(key string, ttl time.Duration, value string) (s
 
 func (mr *KRedis) Restore(key string, ttl time.Duration, value string) (string, error) {
 	return mr.Client.Restore(mr.ctx, key, ttl, value).Result()
-}
-
-// 设置某个key的值, 并指定ttl
-func (mr *KRedis) Set(key string, value interface{}, duration time.Duration) (bool, error) {
-	err := mr.Client.Set(mr.ctx, key, value, duration).Err()
-	if err != nil {
-		return false, err
-	}
-	return true, nil
 }
 
 // 删除一批key
