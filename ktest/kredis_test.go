@@ -3,6 +3,7 @@ package ktest
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,7 +19,7 @@ var (
 func init() {
 	klog = nil
 	ctx := context.Background()
-	redisHd = kredis.NewKRedis(ctx, "127.0.0.1", 16379, "", "WuTz@DtXyTeCh.com", 0)
+	redisHd = kredis.NewKRedis(ctx, "10.50.145.10", 16379, "", "WuTz@DtXyTeCh.com", 0)
 	fmt.Println("init redis success!")
 }
 
@@ -74,6 +75,130 @@ func Test_RedisScanMatch(t *testing.T) {
 			t.Fatal(err)
 		} else {
 			t.Log("key count:", len(ret))
+		}
+	} else {
+		t.Fatal("redis not connect!")
+	}
+}
+
+func Test_JsonSet(t *testing.T) {
+	if redisHd.Ping() {
+		beginTime := time.Now()
+		t.Log("redisJsonSet begin ", beginTime.Format("2006-01-02 15:04:05.000"))
+		err := redisHd.JsonSet("testJson", ".", `{"name":"khan","age":30}`)
+		endTime := time.Now()
+		t.Log("redisJsonSet end", endTime.Format("2006-01-02 15:04:05.000"))
+		t.Log("redisJsonSet cost ", endTime.Sub(beginTime).Milliseconds())
+		if err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		t.Fatal("redis not connect!")
+	}
+}
+
+func Test_JsonGet(t *testing.T) {
+	if redisHd.Ping() {
+		beginTime := time.Now()
+		t.Log("redisJsonSet begin ", beginTime.Format("2006-01-02 15:04:05.000"))
+		r, err := redisHd.JsonGet("testJson", ".")
+		endTime := time.Now()
+		t.Log("redisJsonSet end", endTime.Format("2006-01-02 15:04:05.000"))
+		t.Log("redisJsonSet cost ", endTime.Sub(beginTime).Milliseconds())
+		if err != nil {
+			t.Fatal(err)
+		} else {
+			t.Log("json:", r)
+		}
+	} else {
+		t.Fatal("redis not connect!")
+	}
+}
+
+func Test_JsonType(t *testing.T) {
+	if redisHd.Ping() {
+		beginTime := time.Now()
+		t.Log("redisJsonType begin ", beginTime.Format("2006-01-02 15:04:05.000"))
+		r, err := redisHd.JsonType("testJson", "$.name")
+		endTime := time.Now()
+		t.Log("redisJsonSet end", endTime.Format("2006-01-02 15:04:05.000"))
+		t.Log("redisJsonSet cost ", endTime.Sub(beginTime).Milliseconds())
+		if err != nil {
+			t.Fatal(err)
+		} else {
+			t.Log("json type:", strings.Join(r, ","))
+		}
+	} else {
+		t.Fatal("redis not connect!")
+	}
+}
+
+func Test_JsonObjKeys(t *testing.T) {
+	if redisHd.Ping() {
+		beginTime := time.Now()
+		t.Log("redisJsonObjKeys begin ", beginTime.Format("2006-01-02 15:04:05.000"))
+		r, err := redisHd.JsonObjKeys("testJson", ".")
+		endTime := time.Now()
+		t.Log("redisJsonSet end", endTime.Format("2006-01-02 15:04:05.000"))
+		t.Log("redisJsonSet cost ", endTime.Sub(beginTime).Milliseconds())
+		if err != nil {
+			t.Fatal(err)
+		} else {
+			t.Log("json keys:", strings.Join(r, ","))
+		}
+	} else {
+		t.Fatal("redis not connect!")
+	}
+}
+
+func Test_JsonDel(t *testing.T) {
+	if redisHd.Ping() {
+		beginTime := time.Now()
+		t.Log("redisJsonDel begin ", beginTime.Format("2006-01-02 15:04:05.000"))
+		r, err := redisHd.JsonDel("testJson", "$.age")
+		endTime := time.Now()
+		t.Log("redisJsonSet end", endTime.Format("2006-01-02 15:04:05.000"))
+		t.Log("redisJsonSet cost ", endTime.Sub(beginTime).Milliseconds())
+		if err != nil {
+			t.Fatal(err)
+		} else {
+			t.Logf("json del count %d keys", r)
+		}
+	} else {
+		t.Fatal("redis not connect!")
+	}
+}
+
+func Test_JsonMerge(t *testing.T) {
+	if redisHd.Ping() {
+		beginTime := time.Now()
+		t.Log("redisJsonMerge begin ", beginTime.Format("2006-01-02 15:04:05.000"))
+		// err := redisHd.JsonMerge("testJson", ".", `{"age":30}`)
+		err := redisHd.JsonMerge("testJson", ".", `{"another":{}}`)
+		endTime := time.Now()
+		t.Log("redisJsonSet end", endTime.Format("2006-01-02 15:04:05.000"))
+		t.Log("redisJsonSet cost ", endTime.Sub(beginTime).Milliseconds())
+		if err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		t.Fatal("redis not connect!")
+	}
+}
+
+func Test_JsonObjLen(t *testing.T) {
+	if redisHd.Ping() {
+		beginTime := time.Now()
+		t.Log("redisJsonObjLen begin ", beginTime.Format("2006-01-02 15:04:05.000"))
+		r, err := redisHd.JsonObjLen("testJson", "$.another")
+		// r, err := redisHd.JsonObjLen("docJson", "$..a")
+		endTime := time.Now()
+		t.Log("redisJsonSet end", endTime.Format("2006-01-02 15:04:05.000"))
+		t.Log("redisJsonSet cost ", endTime.Sub(beginTime).Milliseconds())
+		if err != nil {
+			t.Fatal(err)
+		} else {
+			t.Logf("json obj len %d keys", r)
 		}
 	} else {
 		t.Fatal("redis not connect!")
