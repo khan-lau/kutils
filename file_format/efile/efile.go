@@ -715,6 +715,23 @@ func ParseEText(line string, sep string) (*klists.KList[string], error) {
 	return fields, nil
 }
 
+// @bref 解析所有表格数据，并返回 所有表与结果集
+func ParseETables(root *ENode) (map[string]*klists.KList[*klists.KList[string]], error) {
+	tables := make(map[string]*klists.KList[*klists.KList[string]])
+	// 遍历子节点，并解析每个节点的表格数据。
+	for iter := root.Children.Front(); iter != nil; iter = iter.Next() {
+		node := iter.Value
+		if records, err := ParseETable(root, node.Name); err == nil {
+			tables[node.Name] = records
+		} else {
+			return nil, fmt.Errorf("parse etables error: %s", err.Error())
+		}
+	}
+
+	return tables, nil
+}
+
+// @bref 解析一个节点下的表格数据，并返回 指定节点的结果集
 func ParseETable(root *ENode, path string) (*klists.KList[*klists.KList[string]], error) {
 	node, err := GetENodeByPath(root, path)
 	if nil != err {
