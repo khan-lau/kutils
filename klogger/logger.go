@@ -95,7 +95,7 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 
 	encoder := zapcore.NewConsoleEncoder(cfg)
 
-	var writeSyncer zapcore.WriteSyncer
+	// var multiSyncer zapcore.WriteSyncer
 	syncers := make([]zapcore.WriteSyncer, 0, 10)
 
 	if len(filename) > 0 {
@@ -113,6 +113,15 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 			rotatelogs.WithMaxAge(time.Duration(conf.MaxAge)*time.Hour),             // 最长保存30天
 			rotatelogs.WithRotationTime(time.Duration(conf.RotationTime)*time.Hour)) // 24小时切割一次
 
+		// logFile := &lumberjack.Logger{
+		// 	Filename:   filen_prefix + file_suffix,
+		// 	MaxSize:    1024,        // 最大保存10MB日志文件
+		// 	MaxBackups: 50,          // 最多保存10个备份
+		// 	MaxAge:     conf.MaxAge, // 最长保存30天
+		// 	LocalTime:  true,        // 本地时间
+		// 	Compress:   true,        // 是否压缩
+		// }
+
 		syncers = append(syncers, zapcore.AddSync(logFile))
 	}
 
@@ -125,10 +134,20 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 		syncers = append(syncers, zapcore.AddSync(os.Stdout))
 	}
 
-	writeSyncer = zapcore.NewMultiWriteSyncer(syncers...)
+	// 1. 先合并所有的写入端
+	multiSyncer := zapcore.NewMultiWriteSyncer(syncers...)
+
+	// // 2. 使用官方推荐的 BufferedWriteSyncer 实现异步批量写入
+	// // 这在 v1.26.0 中是稳定且标准的方式
+	// bufferedWriter := &zapcore.BufferedWriteSyncer{
+	// 	WS:            multiSyncer,
+	// 	Size:          4 * 1024,        // 4KB 缓冲区
+	// 	FlushInterval: 1 * time.Second, // 每秒强制刷盘
+	// }
 
 	core := zapcore.NewCore(encoder, //NewJSONEncoder
-		writeSyncer,
+		// bufferedWriter, //
+		multiSyncer,
 		zapcore.Level(zapcore.Level(conf.Level)))
 
 	log := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1)) // AddCaller() 显示文件名与行号; zap.AddCallerSkip(1)打印的文件名与行号在调用栈往外跳一层
@@ -136,152 +155,158 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 	return &Logger{log: log}
 }
 
-///////////////////////////////////////////////////////////////
-
-func (logger *Logger) Debug(template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().Debugf(template, args...)
-	}
-}
-
-func (logger *Logger) Info(template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().Infof(template, args...)
-	}
-}
-
-func (logger *Logger) Warrn(template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().Warnf(template, args...)
-	}
-}
-
-func (logger *Logger) Error(template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().Errorf(template, args...)
-	}
-}
-
-func (logger *Logger) DPanic(template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().DPanicf(template, args...)
-	}
-}
-func (logger *Logger) Fatal(template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().Errorf(template, args...)
+func (that *Logger) Sync() {
+	if that != nil {
+		that.log.Sync() // 清空缓冲区
 	}
 }
 
 ///////////////////////////////////////////////////////////////
 
-func (logger *Logger) D(template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().Debugf(kstrings.FormatString(template, args...))
+func (that *Logger) Debug(template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().Debugf(template, args...)
 	}
 }
 
-func (logger *Logger) I(template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().Infof(kstrings.FormatString(template, args...))
+func (that *Logger) Info(template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().Infof(template, args...)
 	}
 }
 
-func (logger *Logger) W(template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().Warnf(kstrings.FormatString(template, args...))
+func (that *Logger) Warrn(template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().Warnf(template, args...)
 	}
 }
 
-func (logger *Logger) E(template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().Errorf(kstrings.FormatString(template, args...))
+func (that *Logger) Error(template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().Errorf(template, args...)
 	}
 }
 
-func (logger *Logger) DP(template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().DPanicf(kstrings.FormatString(template, args...))
+func (that *Logger) DPanic(template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().DPanicf(template, args...)
 	}
 }
-func (logger *Logger) F(template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().Errorf(kstrings.FormatString(template, args...))
-	}
-}
-
-///////////////////////////////////////////////////////////////
-
-func (logger *Logger) KDebug(skip int, template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Debugf(template, args...)
-	}
-}
-
-func (logger *Logger) KInfo(skip int, template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Infof(template, args...)
-	}
-}
-
-func (logger *Logger) KWarrn(skip int, template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Warnf(template, args...)
-	}
-}
-
-func (logger *Logger) KError(skip int, template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Errorf(template, args...)
-	}
-}
-
-func (logger *Logger) KDPanic(skip int, template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).DPanicf(template, args...)
-	}
-}
-
-func (logger *Logger) KFatal(skip int, template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Errorf(template, args...)
+func (that *Logger) Fatal(template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().Errorf(template, args...)
 	}
 }
 
 ///////////////////////////////////////////////////////////////
 
-func (logger *Logger) KD(skip int, template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Debugf(kstrings.FormatString(template, args...))
+func (that *Logger) D(template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().Debugf(kstrings.FormatString(template, args...))
 	}
 }
 
-func (logger *Logger) KI(skip int, template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Infof(kstrings.FormatString(template, args...))
+func (that *Logger) I(template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().Infof(kstrings.FormatString(template, args...))
 	}
 }
 
-func (logger *Logger) KW(skip int, template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Warnf(kstrings.FormatString(template, args...))
+func (that *Logger) W(template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().Warnf(kstrings.FormatString(template, args...))
 	}
 }
 
-func (logger *Logger) KE(skip int, template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Errorf(kstrings.FormatString(template, args...))
+func (that *Logger) E(template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().Errorf(kstrings.FormatString(template, args...))
 	}
 }
 
-func (logger *Logger) KDP(skip int, template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).DPanicf(kstrings.FormatString(template, args...))
+func (that *Logger) DP(template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().DPanicf(kstrings.FormatString(template, args...))
+	}
+}
+func (that *Logger) F(template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().Errorf(kstrings.FormatString(template, args...))
 	}
 }
 
-func (logger *Logger) KF(skip int, template string, args ...interface{}) {
-	if logger != nil {
-		logger.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Errorf(kstrings.FormatString(template, args...))
+///////////////////////////////////////////////////////////////
+
+func (that *Logger) KDebug(skip int, template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Debugf(template, args...)
+	}
+}
+
+func (that *Logger) KInfo(skip int, template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Infof(template, args...)
+	}
+}
+
+func (that *Logger) KWarrn(skip int, template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Warnf(template, args...)
+	}
+}
+
+func (that *Logger) KError(skip int, template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Errorf(template, args...)
+	}
+}
+
+func (that *Logger) KDPanic(skip int, template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).DPanicf(template, args...)
+	}
+}
+
+func (that *Logger) KFatal(skip int, template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Errorf(template, args...)
+	}
+}
+
+///////////////////////////////////////////////////////////////
+
+func (that *Logger) KD(skip int, template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Debugf(kstrings.FormatString(template, args...))
+	}
+}
+
+func (that *Logger) KI(skip int, template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Infof(kstrings.FormatString(template, args...))
+	}
+}
+
+func (that *Logger) KW(skip int, template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Warnf(kstrings.FormatString(template, args...))
+	}
+}
+
+func (that *Logger) KE(skip int, template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Errorf(kstrings.FormatString(template, args...))
+	}
+}
+
+func (that *Logger) KDP(skip int, template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).DPanicf(kstrings.FormatString(template, args...))
+	}
+}
+
+func (that *Logger) KF(skip int, template string, args ...interface{}) {
+	if that != nil {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Errorf(kstrings.FormatString(template, args...))
 	}
 }
