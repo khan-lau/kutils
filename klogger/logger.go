@@ -65,16 +65,16 @@ type Logger struct {
 }
 
 // var log *zap.Logger
-func LoggerInstanceWithoutConsole(filename string, logLevel int8) *Logger {
-	return LoggerInstance(filename, logLevel, false, false)
+func LoggerInstanceWithoutConsole(filename string, async bool, logLevel int8) *Logger {
+	return LoggerInstance(filename, logLevel, false, async, false)
 }
 
 func LoggerInstanceOnlyConsole(logLevel int8) *Logger {
-	return LoggerInstance("", logLevel, true, true)
+	return LoggerInstance("", logLevel, true, false, true)
 }
 
-func LoggerInstance(filename string, logLevel int8, needConsole bool, needTerminalColor bool) *Logger {
-	conf := NewConfigure().SetLogFile(filename).SetLevel(Level(logLevel)).ShowConsole(needConsole).IsColorful(needTerminalColor)
+func LoggerInstance(filename string, logLevel int8, needConsole bool, async bool, needTerminalColor bool) *Logger {
+	conf := NewConfigure().SetLogFile(filename).SetLevel(Level(logLevel)).ShowConsole(needConsole).SetAsync(async).IsColorful(needTerminalColor)
 	return GetLoggerWithConfig(conf)
 }
 
@@ -137,18 +137,21 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 	// 1. 先合并所有的写入端
 	multiSyncer := zapcore.NewMultiWriteSyncer(syncers...)
 
-	// // 2. 使用官方推荐的 BufferedWriteSyncer 实现异步批量写入
-	// // 这在 v1.26.0 中是稳定且标准的方式
-	// bufferedWriter := &zapcore.BufferedWriteSyncer{
-	// 	WS:            multiSyncer,
-	// 	Size:          4 * 1024,        // 4KB 缓冲区
-	// 	FlushInterval: 1 * time.Second, // 每秒强制刷盘
-	// }
+	var core zapcore.Core
+	if conf.Async {
+		// 2. 使用官方推荐的 BufferedWriteSyncer 实现异步批量写入
+		bufferedWriter := &zapcore.BufferedWriteSyncer{
+			WS:            multiSyncer,
+			Size:          4 * 1024 * 1024, // 4M 缓冲区
+			FlushInterval: 1 * time.Second, // 每秒强制刷盘
+		}
 
-	core := zapcore.NewCore(encoder, //NewJSONEncoder
-		// bufferedWriter, //
-		multiSyncer,
-		zapcore.Level(zapcore.Level(conf.Level)))
+		core = zapcore.NewCore(encoder, //NewJSONEncoder
+			bufferedWriter, //
+			zapcore.Level(zapcore.Level(conf.Level)))
+	} else {
+		core = zapcore.NewCore(encoder, multiSyncer, zapcore.Level(zapcore.Level(conf.Level)))
+	}
 
 	log := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1)) // AddCaller() 显示文件名与行号; zap.AddCallerSkip(1)打印的文件名与行号在调用栈往外跳一层
 

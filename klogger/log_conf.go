@@ -33,6 +33,7 @@ package klogger
 type LoggerConfigure struct {
 	Level        Level  `json:"logLevel"`     // 日志等级
 	Colorful     bool   `json:"colorful"`     // 是否需要彩色
+	Async        bool   `json:"async"`        // 是否异步输出日志, 默认同步输出
 	MaxAge       int    `json:"maxAge"`       // 日志最长保留时间, 单位 小时
 	RotationTime int    `json:"rotationTime"` // 日志滚动周期, 单位 小时, 24小时滚动一个文件
 	ToConsole    bool   `json:"console"`      // 是否输出到控制台
@@ -43,6 +44,7 @@ func NewConfigure() *LoggerConfigure {
 	return &LoggerConfigure{
 		Level:        0,
 		Colorful:     false,
+		Async:        false,
 		MaxAge:       720,
 		RotationTime: 24,
 		ToConsole:    false,
@@ -57,6 +59,11 @@ func (that *LoggerConfigure) SetLevel(level Level) *LoggerConfigure {
 
 func (that *LoggerConfigure) IsColorful(need bool) *LoggerConfigure {
 	that.Colorful = need
+	return that
+}
+
+func (that *LoggerConfigure) SetAsync(async bool) *LoggerConfigure {
+	that.Async = async
 	return that
 }
 
