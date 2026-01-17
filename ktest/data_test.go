@@ -75,7 +75,7 @@ func TestTrim(t *testing.T) {
 	header = strings.TrimSpace(header)
 	slice := strings.Split(header, ";")
 
-	kslices.Process[string](slice, func(val string) string {
+	kslices.Process(slice, func(val string) string {
 		result := strings.TrimSpace(val)
 		fmt.Printf("[%s]\n", result)
 		return result
