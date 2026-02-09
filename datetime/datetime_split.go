@@ -36,7 +36,7 @@ func SplitNaturalDuration(start, end Time.Time, unit uint, duration Duration) []
 	list := klists.New[*TimeSlice]()
 	if duration == NONE {
 		list.PushBack(&TimeSlice{Start: uint64(start.Unix()), End: uint64(end.Unix()), Tag: nil}) //  Records: klists.New[*RecordItem]()
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == SECOND {
@@ -55,7 +55,7 @@ func SplitNaturalDuration(start, end Time.Time, unit uint, duration Duration) []
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == MINUTE {
@@ -75,7 +75,7 @@ func SplitNaturalDuration(start, end Time.Time, unit uint, duration Duration) []
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == HOUR {
@@ -95,7 +95,7 @@ func SplitNaturalDuration(start, end Time.Time, unit uint, duration Duration) []
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == DAY {
@@ -115,7 +115,7 @@ func SplitNaturalDuration(start, end Time.Time, unit uint, duration Duration) []
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == WEEK {
@@ -141,7 +141,7 @@ func SplitNaturalDuration(start, end Time.Time, unit uint, duration Duration) []
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == MONTH {
@@ -168,7 +168,7 @@ func SplitNaturalDuration(start, end Time.Time, unit uint, duration Duration) []
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == YEAR {
@@ -195,10 +195,10 @@ func SplitNaturalDuration(start, end Time.Time, unit uint, duration Duration) []
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
-	return klists.ToKSlice[*TimeSlice](list)
+	return klists.ToKSlice(list)
 }
 
 // 按指定时间间隔 进行非自然周期的切割
@@ -220,7 +220,7 @@ func SplitUnnaturalDuration(start, end Time.Time, unit uint, duration Duration) 
 	if duration == NONE {
 		list.PushBack(&TimeSlice{Start: uint64(start.Unix()), End: uint64(end.Unix()), Tag: nil}) //  Records: klists.New[*RecordItem]()
 
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == SECOND {
@@ -239,7 +239,7 @@ func SplitUnnaturalDuration(start, end Time.Time, unit uint, duration Duration) 
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == MINUTE {
@@ -259,7 +259,7 @@ func SplitUnnaturalDuration(start, end Time.Time, unit uint, duration Duration) 
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == HOUR {
@@ -279,7 +279,7 @@ func SplitUnnaturalDuration(start, end Time.Time, unit uint, duration Duration) 
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == DAY {
@@ -299,7 +299,7 @@ func SplitUnnaturalDuration(start, end Time.Time, unit uint, duration Duration) 
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == WEEK {
@@ -320,7 +320,7 @@ func SplitUnnaturalDuration(start, end Time.Time, unit uint, duration Duration) 
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == MONTH {
@@ -343,7 +343,7 @@ func SplitUnnaturalDuration(start, end Time.Time, unit uint, duration Duration) 
 			i = i + step
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
 	if duration == YEAR {
@@ -368,8 +368,8 @@ func SplitUnnaturalDuration(start, end Time.Time, unit uint, duration Duration) 
 
 			list.PushBack(&TimeSlice{Start: valBegin, End: valEnd, Tag: nil})
 		}
-		return klists.ToKSlice[*TimeSlice](list)
+		return klists.ToKSlice(list)
 	}
 
-	return klists.ToKSlice[*TimeSlice](list)
+	return klists.ToKSlice(list)
 }

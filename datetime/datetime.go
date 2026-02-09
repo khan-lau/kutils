@@ -27,6 +27,7 @@ const (
 type RecordItem struct {
 	Timestamp uint64  // 时间戳, 精确到s
 	Value     float64 // 值
+	IsNull    bool    // 是否为空值
 }
 
 type TimeSlice struct {
