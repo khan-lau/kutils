@@ -718,7 +718,7 @@ func (mr *KRedis) Scan(limit int, aboutTypes []string, ignoreKeys []string, incl
 
 		// 如果有白名单, 则启用白名单规则, 不在白名单的被过滤掉, 白名单优先级低于黑名单
 		if len(includeKeys) > 0 {
-			if !kslices.Contains[string](includeKeys, key) {
+			if !kslices.Contains(includeKeys, key) {
 				continue
 			}
 		}
@@ -835,14 +835,14 @@ func (mr *KRedis) Subscribe(timeout int, callback func(err error, topic string, 
 	}()
 }
 
-// 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; chanSize 最大允许队列大小, 如果< 100, 则为100; callback为接收消息的回调函数; topics为需要订阅的topic
+// 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; chanSize 最大允许队列大小, 如果< 1, 则为1; callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback func(err error, topic string, payload interface{}), topics ...string) {
 	go func() {
 		pubsub := mr.Client.PSubscribe(mr.ctx, topics...)
 		// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
 		defer pubsub.Close()
-		if chanSize < 100 {
-			chanSize = 100
+		if chanSize < 1 {
+			chanSize = 1
 		}
 		ch := pubsub.Channel(redisHd.WithChannelSize(chanSize), redisHd.WithChannelHealthCheckInterval(time.Second*30))
 	forEnd: //这个标签
@@ -858,7 +858,6 @@ func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback fun
 				continue
 			case <-mr.ctx.Done():
 				break forEnd
-
 			}
 		}
 
