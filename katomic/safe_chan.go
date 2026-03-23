@@ -10,6 +10,7 @@ var (
 	ErrChannelClosed      = errors.New("send on closed channel")
 	ErrGenerationOutdated = errors.New("generation outdated, send rejected")
 	ErrChannelNil         = errors.New("channel is nil")
+	ErrChannelFull        = errors.New("channel is full")
 )
 
 // SafeChannel 是一个高性能、Panic 免疫的并发通道封装。
@@ -88,6 +89,41 @@ func (that *SafeChannel[T]) Send(data T) (err error) {
 
 	that.ch <- data
 	return nil
+}
+
+// AsyncSend 保持极致的原子性能 (无锁)，但为非阻塞, 可能返回 ErrChannelFull 错误。
+func (that *SafeChannel[T]) AsyncSend(data T) (err error) {
+	if that == nil || that.ch == nil {
+		return ErrChannelNil
+	}
+
+	// 1. 记录发起发送时的版本号
+	currentGen := atomic.LoadUint64(&that.gen)
+
+	// 2. 检查关闭状态
+	if atomic.LoadUint32(&that.closed) == 1 {
+		return ErrChannelClosed
+	}
+
+	// 3. 拦截 Panic（仍然保留）
+	defer func() {
+		if r := recover(); r != nil {
+			err = ErrChannelClosed
+		}
+	}()
+
+	// 4. 核心：二次校验代数
+	if atomic.LoadUint64(&that.gen) != currentGen {
+		return ErrGenerationOutdated
+	}
+
+	// 改为 select + default，非阻塞
+	select {
+	case that.ch <- data:
+		return nil
+	default:
+		return ErrChannelFull // 或自定义错误
+	}
 }
 
 // 安全的Close函数, 确保只关闭一次，且是原子操作
