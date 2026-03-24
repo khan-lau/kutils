@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/khan-lau/kutils/container/kcontext"
 	kslices "github.com/khan-lau/kutils/container/kslices"
 	"github.com/khan-lau/kutils/container/kstrings"
 	"github.com/khan-lau/kutils/klogger"
@@ -18,15 +19,16 @@ type Empty struct{}
 
 type KRedis struct {
 	Client *redisHd.Client
-	ctx    context.Context
-	cancel context.CancelFunc
+	ctx    *kcontext.ContextNode
+	// ctx    context.Context
+	// cancel context.CancelFunc
 }
 
 func redisOnConnect(ctx context.Context, cn *redisHd.Conn) error {
 	return nil
 }
 
-func NewKRedis(ctx context.Context, host string, port int, user string, password string, dbNum int) *KRedis {
+func NewKRedis(ctx *kcontext.ContextNode, host string, port int, user string, password string, dbNum int) *KRedis {
 	client := redisHd.NewClient(&redisHd.Options{
 		Addr:            host + ":" + strconv.Itoa(port),
 		Username:        user,     // redis 6.0以上版本
@@ -42,14 +44,13 @@ func NewKRedis(ctx context.Context, host string, port int, user string, password
 		OnConnect:       redisOnConnect,
 	})
 
-	subCtx, subCancel := context.WithCancel(ctx)
-
-	return &KRedis{Client: client, ctx: subCtx, cancel: subCancel}
+	subCtx := ctx.NewChild("kredis_client")
+	return &KRedis{Client: client, ctx: subCtx}
 }
 
 // 执行指令
 func (mr *KRedis) Do(args ...interface{}) (interface{}, error) {
-	val, err := mr.Client.Do(mr.ctx, args...).Result()
+	val, err := mr.Client.Do(mr.ctx.Context(), args...).Result()
 	if err == redisHd.Nil {
 		return nil, nil
 	} else if err != nil {
@@ -60,7 +61,7 @@ func (mr *KRedis) Do(args ...interface{}) (interface{}, error) {
 
 // 获取一个key的值
 func (mr *KRedis) Get(key string) (interface{}, error) {
-	val, err := mr.Client.Do(mr.ctx, "GET", key).Result()
+	val, err := mr.Client.Do(mr.ctx.Context(), "GET", key).Result()
 	if err == redisHd.Nil {
 		return nil, nil
 	} else if err != nil {
@@ -71,7 +72,7 @@ func (mr *KRedis) Get(key string) (interface{}, error) {
 
 // 设置某个key的值, 并指定ttl
 func (mr *KRedis) Set(key string, value interface{}, duration time.Duration) (bool, error) {
-	err := mr.Client.Set(mr.ctx, key, value, duration).Err()
+	err := mr.Client.Set(mr.ctx.Context(), key, value, duration).Err()
 	if err != nil {
 		return false, err
 	}
@@ -80,7 +81,7 @@ func (mr *KRedis) Set(key string, value interface{}, duration time.Duration) (bo
 
 // 判断某个key是否存在
 func (mr *KRedis) Exist(key string) (bool, error) {
-	_, err := mr.Client.Get(mr.ctx, key).Result()
+	_, err := mr.Client.Get(mr.ctx.Context(), key).Result()
 	if err == redisHd.Nil {
 		return false, nil
 	} else if err != nil {
@@ -91,7 +92,7 @@ func (mr *KRedis) Exist(key string) (bool, error) {
 
 // 获取一个key的hash字段的值
 func (that *KRedis) HGet(key string, field string) (interface{}, error) {
-	val, err := that.Client.HGet(that.ctx, key, field).Result()
+	val, err := that.Client.HGet(that.ctx.Context(), key, field).Result()
 	if err == redisHd.Nil {
 		return nil, nil
 	} else if err != nil {
@@ -102,7 +103,7 @@ func (that *KRedis) HGet(key string, field string) (interface{}, error) {
 
 // 设置一个key的hash字段的值
 func (that *KRedis) HSet(key string, field string, value interface{}) error {
-	err := that.Client.HSet(that.ctx, key, field, value).Err()
+	err := that.Client.HSet(that.ctx.Context(), key, field, value).Err()
 	if err != nil {
 		return err
 	}
@@ -111,7 +112,7 @@ func (that *KRedis) HSet(key string, field string, value interface{}) error {
 
 // 获取一个key的hash字段的值列表
 func (that *KRedis) HGetAll(key string) (map[string]string, error) {
-	valMap, err := that.Client.HGetAll(that.ctx, key).Result()
+	valMap, err := that.Client.HGetAll(that.ctx.Context(), key).Result()
 	if err == redisHd.Nil {
 		return nil, nil
 	} else if err != nil {
@@ -122,7 +123,7 @@ func (that *KRedis) HGetAll(key string) (map[string]string, error) {
 
 // 设置一个key的hash字段的值列表
 func (that *KRedis) HSetAll(key string, fields map[string]interface{}) error {
-	err := that.Client.HSet(that.ctx, key, fields).Err()
+	err := that.Client.HSet(that.ctx.Context(), key, fields).Err()
 	if err != nil {
 		return err
 	}
@@ -131,7 +132,7 @@ func (that *KRedis) HSetAll(key string, fields map[string]interface{}) error {
 
 // 判断一个key的hash字段是否存在
 func (that *KRedis) HExists(key string, field string) (bool, error) {
-	isExists, err := that.Client.HExists(that.ctx, key, field).Result()
+	isExists, err := that.Client.HExists(that.ctx.Context(), key, field).Result()
 	if nil != err {
 		return false, err
 	}
@@ -140,7 +141,7 @@ func (that *KRedis) HExists(key string, field string) (bool, error) {
 
 // 获取一个key的hash字段的数量
 func (that *KRedis) HLen(key string) (int64, error) {
-	val, err := that.Client.HLen(that.ctx, key).Result()
+	val, err := that.Client.HLen(that.ctx.Context(), key).Result()
 	if nil != err {
 		return 0, err
 	}
@@ -176,7 +177,7 @@ func (that *KRedis) HSetNX(ctx context.Context, key, field string, value interfa
 
 // 删除一个key的hash字段的值列表
 func (that *KRedis) HDel(key string, fields ...string) error {
-	_, err := that.Client.HDel(that.ctx, key, fields...).Result()
+	_, err := that.Client.HDel(that.ctx.Context(), key, fields...).Result()
 	if nil != err {
 		return err
 	}
@@ -185,7 +186,7 @@ func (that *KRedis) HDel(key string, fields ...string) error {
 
 // 获取一个key的hash字段的值列表
 func (that *KRedis) HMGet(key string, fields ...string) ([]interface{}, error) {
-	valMap, err := that.Client.HMGet(that.ctx, key, fields...).Result()
+	valMap, err := that.Client.HMGet(that.ctx.Context(), key, fields...).Result()
 	if err == redisHd.Nil {
 		return nil, nil
 	} else if nil != err {
@@ -196,7 +197,7 @@ func (that *KRedis) HMGet(key string, fields ...string) ([]interface{}, error) {
 
 // 设置一个key的hash字段的值列表, 如果不存在则创建
 func (that *KRedis) HMSet(key string, fields map[string]interface{}) error {
-	err := that.Client.HMSet(that.ctx, key, fields).Err()
+	err := that.Client.HMSet(that.ctx.Context(), key, fields).Err()
 	if nil != err {
 		return err
 	}
@@ -205,130 +206,130 @@ func (that *KRedis) HMSet(key string, fields map[string]interface{}) error {
 
 // 从列表左边插入数据
 func (that *KRedis) LPush(key string, values ...interface{}) (int64, error) {
-	return that.Client.LPush(that.ctx, key, values...).Result()
+	return that.Client.LPush(that.ctx.Context(), key, values...).Result()
 }
 
 // 从列表左边插入数据, 如果不存在则不插入数据
 func (that *KRedis) LPushX(key string, values ...interface{}) (int64, error) {
-	return that.Client.LPushX(that.ctx, key, values...).Result()
+	return that.Client.LPushX(that.ctx.Context(), key, values...).Result()
 }
 
 // 从列表右边插入数据
 func (that *KRedis) RPush(key string, values ...interface{}) (int64, error) {
-	return that.Client.RPush(that.ctx, key, values...).Result()
+	return that.Client.RPush(that.ctx.Context(), key, values...).Result()
 }
 
 // 从列表右边插入数据, 如果不存在则不插入数据
 func (that *KRedis) RPushX(key string, values ...interface{}) (int64, error) {
-	return that.Client.RPushX(that.ctx, key, values...).Result()
+	return that.Client.RPushX(that.ctx.Context(), key, values...).Result()
 }
 
 // 从列表左边弹出数据
 func (that *KRedis) LPop(key string) (string, error) {
-	return that.Client.LPop(that.ctx, key).Result()
+	return that.Client.LPop(that.ctx.Context(), key).Result()
 }
 
 // 从列表右边弹出数据
 func (that *KRedis) RPop(key string) (string, error) {
-	return that.Client.RPop(that.ctx, key).Result()
+	return that.Client.RPop(that.ctx.Context(), key).Result()
 }
 
 // 返回列表的一个范围内的数据，也可以返回全部数据
 func (that *KRedis) LRange(key string, start int64, stop int64) ([]string, error) {
-	return that.Client.LRange(that.ctx, key, start, stop).Result()
+	return that.Client.LRange(that.ctx.Context(), key, start, stop).Result()
 }
 
 // 返回列表的大小
 func (that *KRedis) LLen(key string) (int64, error) {
-	return that.Client.LLen(that.ctx, key).Result()
+	return that.Client.LLen(that.ctx.Context(), key).Result()
 }
 
 func (that *KRedis) LTrim(key string, start int64, stop int64) error {
-	return that.Client.LTrim(that.ctx, key, start, stop).Err()
+	return that.Client.LTrim(that.ctx.Context(), key, start, stop).Err()
 }
 
 func (that *KRedis) LSet(key string, index int64, value interface{}) error {
-	return that.Client.LSet(that.ctx, key, index, value).Err()
+	return that.Client.LSet(that.ctx.Context(), key, index, value).Err()
 }
 
 // 删除列表中的数据
 func (that *KRedis) LRem(key string, count int64, value interface{}) (int64, error) {
-	return that.Client.LRem(that.ctx, key, count, value).Result()
+	return that.Client.LRem(that.ctx.Context(), key, count, value).Result()
 }
 
 // 根据索引坐标，查询列表中的数据
 func (that *KRedis) LIndex(key string, index int64) (string, error) {
-	return that.Client.LIndex(that.ctx, key, index).Result()
+	return that.Client.LIndex(that.ctx.Context(), key, index).Result()
 }
 
 // 在指定位置插入数据，在头部插入用"before"，尾部插入用"after"
 func (that *KRedis) LInsert(key string, position string, pivot interface{}, value interface{}) (int64, error) {
-	return that.Client.LInsert(that.ctx, key, position, pivot, value).Result()
+	return that.Client.LInsert(that.ctx.Context(), key, position, pivot, value).Result()
 }
 
 func (that *KRedis) SAdd(key string, members ...interface{}) (int64, error) {
-	return that.Client.SAdd(that.ctx, key, members...).Result()
+	return that.Client.SAdd(that.ctx.Context(), key, members...).Result()
 }
 
 func (that *KRedis) SMembers(key string) ([]string, error) {
-	return that.Client.SMembers(that.ctx, key).Result()
+	return that.Client.SMembers(that.ctx.Context(), key).Result()
 }
 
 func (that *KRedis) SRem(key string, members ...interface{}) (int64, error) {
-	return that.Client.SRem(that.ctx, key, members...).Result()
+	return that.Client.SRem(that.ctx.Context(), key, members...).Result()
 }
 
 func (that *KRedis) SIsMember(key string, member interface{}) (bool, error) {
-	return that.Client.SIsMember(that.ctx, key, member).Result()
+	return that.Client.SIsMember(that.ctx.Context(), key, member).Result()
 }
 
 func (that *KRedis) SCard(key string) (int64, error) {
-	return that.Client.SCard(that.ctx, key).Result()
+	return that.Client.SCard(that.ctx.Context(), key).Result()
 }
 
 func (that *KRedis) SPop(key string) (string, error) {
-	return that.Client.SPop(that.ctx, key).Result()
+	return that.Client.SPop(that.ctx.Context(), key).Result()
 }
 
 func (that *KRedis) SPopN(key string, count int64) ([]string, error) {
-	return that.Client.SPopN(that.ctx, key, count).Result()
+	return that.Client.SPopN(that.ctx.Context(), key, count).Result()
 }
 
 func (that *KRedis) SUnion(keys ...string) ([]string, error) {
-	return that.Client.SUnion(that.ctx, keys...).Result()
+	return that.Client.SUnion(that.ctx.Context(), keys...).Result()
 }
 
 func (that *KRedis) SUnionStore(destKey string, keys ...string) (int64, error) {
-	return that.Client.SUnionStore(that.ctx, destKey, keys...).Result()
+	return that.Client.SUnionStore(that.ctx.Context(), destKey, keys...).Result()
 }
 
 func (that *KRedis) SInter(keys ...string) ([]string, error) {
-	return that.Client.SInter(that.ctx, keys...).Result()
+	return that.Client.SInter(that.ctx.Context(), keys...).Result()
 }
 
 func (that *KRedis) SInterStore(destKey string, keys ...string) (int64, error) {
-	return that.Client.SInterStore(that.ctx, destKey, keys...).Result()
+	return that.Client.SInterStore(that.ctx.Context(), destKey, keys...).Result()
 }
 
 func (that *KRedis) SDiff(keys ...string) ([]string, error) {
-	return that.Client.SDiff(that.ctx, keys...).Result()
+	return that.Client.SDiff(that.ctx.Context(), keys...).Result()
 }
 
 func (that *KRedis) SDiffStore(destKey string, keys ...string) (int64, error) {
-	return that.Client.SDiffStore(that.ctx, destKey, keys...).Result()
+	return that.Client.SDiffStore(that.ctx.Context(), destKey, keys...).Result()
 }
 
 func (that *KRedis) SMove(source, destination string, member interface{}) (bool, error) {
-	return that.Client.SMove(that.ctx, source, destination, member).Result()
+	return that.Client.SMove(that.ctx.Context(), source, destination, member).Result()
 }
 
 func (that *KRedis) SRandMember(key string) (string, error) {
-	return that.Client.SRandMember(that.ctx, key).Result()
+	return that.Client.SRandMember(that.ctx.Context(), key).Result()
 }
 
 // 获取一个key的数据类型, 数据类型全小写
 func (mr *KRedis) Type(key string) (string, error) {
-	dataType, err := mr.Client.Type(mr.ctx, key).Result()
+	dataType, err := mr.Client.Type(mr.ctx.Context(), key).Result()
 	if nil != err {
 		return "", err
 	}
@@ -337,20 +338,20 @@ func (mr *KRedis) Type(key string) (string, error) {
 
 // 返回一个Key的过期时间, 单位为毫秒
 func (mr *KRedis) PTTL(key string) (time.Duration, error) {
-	return mr.Client.PTTL(mr.ctx, key).Result()
+	return mr.Client.PTTL(mr.ctx.Context(), key).Result()
 }
 
 // 返回一个Key的过期时间, 单位为秒
 func (mr *KRedis) TTL(key string) (time.Duration, error) {
-	return mr.Client.TTL(mr.ctx, key).Result()
+	return mr.Client.TTL(mr.ctx.Context(), key).Result()
 }
 
 func (that *KRedis) Expire(key string, expiration time.Duration) bool {
-	return that.Client.Expire(that.ctx, key, expiration).Val()
+	return that.Client.Expire(that.ctx.Context(), key, expiration).Val()
 }
 
 func (that *KRedis) ExpireAt(key string, tm time.Time) bool {
-	return that.Client.ExpireAt(that.ctx, key, tm).Val()
+	return that.Client.ExpireAt(that.ctx.Context(), key, tm).Val()
 }
 
 // JsonGet 封装了 Redis JSON.GET 命令，并直接返回原始的 JSON 字符串。
@@ -365,7 +366,7 @@ func (that *KRedis) JsonGet(key string, paths ...string) (string, error) {
 		args = append(args, path)
 	}
 	// 执行 Redis 命令
-	cmd := that.Client.Do(that.ctx, args...)
+	cmd := that.Client.Do(that.ctx.Context(), args...)
 	// 检查 Redis 命令执行是否出错
 	if err := cmd.Err(); err != nil {
 		// 如果错误是 redis.Nil (表示键或路径不存在)，则返回空字符串和 nil 错误
@@ -395,7 +396,7 @@ func (that *KRedis) JsonGet(key string, paths ...string) (string, error) {
 func (that *KRedis) JsonSet(key string, path string, value string) error {
 	// 构建 Redis 命令参数：JSON.SET key path jsonValueString
 	// `string(jsonValue)` 将字节切片转换为字符串，go-redis 可以接受
-	cmd := that.Client.Do(that.ctx, "JSON.SET", key, path, value)
+	cmd := that.Client.Do(that.ctx.Context(), "JSON.SET", key, path, value)
 
 	// 检查 Redis 命令执行是否出错
 	if err := cmd.Err(); err != nil {
@@ -412,7 +413,7 @@ func (that *KRedis) JsonSet(key string, path string, value string) error {
 // value: 要存储的 Go 值，将被序列化为 JSON 并与现有值合并。
 // 返回值：如果操作成功则返回 nil，否则返回错误。
 func (that *KRedis) JsonMerge(key string, path string, value string) error {
-	cmd := that.Client.Do(that.ctx, "JSON.MERGE", key, path, value)
+	cmd := that.Client.Do(that.ctx.Context(), "JSON.MERGE", key, path, value)
 	if err := cmd.Err(); err != nil {
 		return err
 	}
@@ -431,7 +432,7 @@ func (that *KRedis) JsonDel(key string, path string) (int64, error) {
 		args = append(args, path)
 	}
 
-	cmd := that.Client.Do(that.ctx, args...)
+	cmd := that.Client.Do(that.ctx.Context(), args...)
 
 	// 检查 Redis 命令执行是否出错
 	if err := cmd.Err(); err != nil {
@@ -459,7 +460,7 @@ func (that *KRedis) JsonType(key string, path string) ([]string, error) {
 		args = append(args, path)
 	}
 
-	cmd := that.Client.Do(that.ctx, args...)
+	cmd := that.Client.Do(that.ctx.Context(), args...)
 
 	if err := cmd.Err(); err != nil {
 		if err == redisHd.Nil {
@@ -510,7 +511,7 @@ func (that *KRedis) JsonObjKeys(key string, path string) ([]string, error) {
 		args = append(args, path)
 	}
 
-	cmd := that.Client.Do(that.ctx, args...)
+	cmd := that.Client.Do(that.ctx.Context(), args...)
 
 	if err := cmd.Err(); err != nil {
 		if err == redisHd.Nil {
@@ -552,7 +553,7 @@ func (that *KRedis) JsonObjLen(key string, path string) ([]int64, error) {
 		args = append(args, path)
 	}
 
-	cmd := that.Client.Do(that.ctx, args...)
+	cmd := that.Client.Do(that.ctx.Context(), args...)
 
 	if err := cmd.Err(); err != nil {
 		if err == redisHd.Nil {
@@ -591,25 +592,25 @@ func (mr *KRedis) Pipeline() redisHd.Pipeliner {
 }
 
 func (mr *KRedis) Dump(key string) (string, error) {
-	return mr.Client.Dump(mr.ctx, key).Result()
+	return mr.Client.Dump(mr.ctx.Context(), key).Result()
 }
 
 func (mr *KRedis) RestoreReplace(key string, ttl time.Duration, value string) (string, error) {
-	return mr.Client.RestoreReplace(mr.ctx, key, ttl, value).Result()
+	return mr.Client.RestoreReplace(mr.ctx.Context(), key, ttl, value).Result()
 }
 
 func (mr *KRedis) Restore(key string, ttl time.Duration, value string) (string, error) {
-	return mr.Client.Restore(mr.ctx, key, ttl, value).Result()
+	return mr.Client.Restore(mr.ctx.Context(), key, ttl, value).Result()
 }
 
 // 删除一批key
 func (mr *KRedis) Del(keys ...string) (int64, error) {
-	return mr.Client.Del(mr.ctx, keys...).Result()
+	return mr.Client.Del(mr.ctx.Context(), keys...).Result()
 }
 
 // 探测服务是否正常
 func (mr *KRedis) Ping() bool {
-	_, err := mr.Client.Ping(mr.ctx).Result()
+	_, err := mr.Client.Ping(mr.ctx.Context()).Result()
 	return nil == err
 }
 
@@ -621,7 +622,7 @@ func (mr *KRedis) ScanMatch(limit int, aboutTypes []string, ignoreKeys []string,
 	for {
 		var keys []string
 		err := error(nil)
-		keys, cursor, err = mr.Client.Scan(mr.ctx, cursor, "", int64(limit)).Result()
+		keys, cursor, err = mr.Client.Scan(mr.ctx.Context(), cursor, "", int64(limit)).Result()
 		if nil != err {
 			return nil, err
 		}
@@ -691,7 +692,7 @@ func (mr *KRedis) Scan(limit int, aboutTypes []string, ignoreKeys []string, incl
 	for {
 		var keys []string
 		err := error(nil)
-		keys, cursor, err = mr.Client.Scan(mr.ctx, cursor, "", int64(limit)).Result()
+		keys, cursor, err = mr.Client.Scan(mr.ctx.Context(), cursor, "", int64(limit)).Result()
 		if nil != err {
 			return nil, err
 		}
@@ -755,22 +756,45 @@ func (mr *KRedis) Scan(limit int, aboutTypes []string, ignoreKeys []string, incl
 
 // 向指定topic发布消息
 func (mr *KRedis) Publish(topic string, payload interface{}) error {
-	return mr.Client.Publish(mr.ctx, topic, payload).Err()
+	return mr.Client.Publish(mr.ctx.Context(), topic, payload).Err()
+}
+
+// 从指定topic订阅消息, 底层API, 最好使用Subscribe替代
+func (mr *KRedis) PSubscribeLow(callback func(err error, topic string, payload interface{}), topics ...string) {
+	go func() {
+		pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
+		defer pubsub.Close()
+
+	forEnd: //这个标签
+		for {
+			message, err := pubsub.ReceiveMessage(mr.ctx.Context())
+			go callback(err, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+
+			select {
+			case <-mr.ctx.Context().Done():
+				break forEnd
+			default:
+				continue
+			}
+		}
+	}()
+
+	callback(errors.New("func UnSubscribe be called"), "", nil)
 }
 
 // 从指定topic订阅消息, 底层API, 最好使用Subscribe替代
 func (mr *KRedis) SubscribeLow(callback func(err error, topic string, payload interface{}), topics ...string) {
 	go func() {
-		pubsub := mr.Client.Subscribe(mr.ctx, topics...)
+		pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
 		defer pubsub.Close()
 
 	forEnd: //这个标签
 		for {
-			message, err := pubsub.ReceiveMessage(mr.ctx)
+			message, err := pubsub.ReceiveMessage(mr.ctx.Context())
 			go callback(err, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
 
 			select {
-			case <-mr.ctx.Done():
+			case <-mr.ctx.Context().Done():
 				break forEnd
 			default:
 				continue
@@ -784,9 +808,7 @@ func (mr *KRedis) SubscribeLow(callback func(err error, topic string, payload in
 // 从指定topic订阅消息
 func (mr *KRedis) SubscribeWithoutTimeout(callback func(err error, topic string, payload interface{}), topics ...string) {
 	go func() {
-		pubsub := mr.Client.Subscribe(mr.ctx, topics...)
-		defer pubsub.Close()
-
+		pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
 		ch := pubsub.Channel(redisHd.WithChannelSize(100), redisHd.WithChannelHealthCheckInterval(time.Second*30))
 	forEnd: //这个标签
 		for {
@@ -794,14 +816,22 @@ func (mr *KRedis) SubscribeWithoutTimeout(callback func(err error, topic string,
 			case message, ok := <-ch:
 				if !ok {
 					go callback(errors.New("channel be closed"), message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+					goto END
 				} else {
 					go callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
 				}
-			case <-mr.ctx.Done():
+			case <-mr.ctx.Context().Done():
 				break forEnd
 			}
 		}
 
+		pubsub.Close()
+		// 此时 ch 已经被 close 了，range 会处理完 Buffer 里的数据后自动退出
+		for msg := range ch {
+			callback(nil, msg.Channel, msg.Payload)
+		}
+
+	END:
 		callback(errors.New("func UnSubscribe be called"), "", nil)
 	}()
 }
@@ -809,10 +839,8 @@ func (mr *KRedis) SubscribeWithoutTimeout(callback func(err error, topic string,
 // 从指定topic订阅消息, timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) Subscribe(timeout int, callback func(err error, topic string, payload interface{}), topics ...string) {
 	go func() {
-		pubsub := mr.Client.Subscribe(mr.ctx, topics...)
+		pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
 		// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
-		defer pubsub.Close()
-
 		ch := pubsub.Channel(redisHd.WithChannelSize(100), redisHd.WithChannelHealthCheckInterval(time.Second*30))
 	forEnd: //这个标签
 		for {
@@ -820,17 +848,24 @@ func (mr *KRedis) Subscribe(timeout int, callback func(err error, topic string, 
 			case message, ok := <-ch:
 				if !ok {
 					go callback(errors.New("channel be closed"), message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+					goto END
 				} else {
 					go callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
 				}
 			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞，那么select也会检测其他case条件，检测到后timeout指定毫秒超时
 				continue
-			case <-mr.ctx.Done():
+			case <-mr.ctx.Context().Done():
 				break forEnd
-
 			}
 		}
 
+		pubsub.Close()
+		// 此时 ch 已经被 close 了，range 会处理完 Buffer 里的数据后自动退出
+		for msg := range ch {
+			callback(nil, msg.Channel, msg.Payload)
+		}
+
+	END:
 		callback(errors.New("func UnSubscribe be called"), "", nil)
 	}()
 }
@@ -838,9 +873,8 @@ func (mr *KRedis) Subscribe(timeout int, callback func(err error, topic string, 
 // 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; chanSize 最大允许队列大小, 如果< 1, 则为1; callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback func(err error, topic string, payload interface{}), topics ...string) {
 	go func() {
-		pubsub := mr.Client.PSubscribe(mr.ctx, topics...)
+		pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
 		// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
-		defer pubsub.Close()
 		if chanSize < 1 {
 			chanSize = 1
 		}
@@ -851,16 +885,24 @@ func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback fun
 			case message, ok := <-ch:
 				if !ok {
 					go callback(errors.New("channel be closed"), message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+					goto END
 				} else {
 					go callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
 				}
 			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞，那么select也会检测其他case条件，检测到后timeout指定毫秒超时
 				continue
-			case <-mr.ctx.Done():
+			case <-mr.ctx.Context().Done():
 				break forEnd
 			}
 		}
 
+		pubsub.Close()
+		// 此时 ch 已经被 close 了，range 会处理完 Buffer 里的数据后自动退出
+		for msg := range ch {
+			callback(nil, msg.Channel, msg.Payload)
+		}
+
+	END:
 		callback(errors.New("func UnSubscribe be called"), "", nil)
 	}()
 }
@@ -868,10 +910,8 @@ func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback fun
 // 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) PSubscribe(timeout int, callback func(err error, topic string, payload interface{}), topics ...string) {
 	go func() {
-		pubsub := mr.Client.PSubscribe(mr.ctx, topics...)
+		pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
 		// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
-		defer pubsub.Close()
-
 		ch := pubsub.Channel(redisHd.WithChannelSize(100), redisHd.WithChannelHealthCheckInterval(time.Second*30))
 	forEnd: //这个标签
 		for {
@@ -879,24 +919,32 @@ func (mr *KRedis) PSubscribe(timeout int, callback func(err error, topic string,
 			case message, ok := <-ch:
 				if !ok {
 					go callback(errors.New("channel be closed"), message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+					goto END
 				} else {
 					go callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
 				}
 			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞，那么select也会检测其他case条件，检测到后timeout指定毫秒超时
 				continue
-			case <-mr.ctx.Done():
+			case <-mr.ctx.Context().Done():
 				break forEnd
 
 			}
 		}
+		pubsub.Close()
+		// 此时 ch 已经被 close 了，range 会处理完 Buffer 里的数据后自动退出
+		for msg := range ch {
+			callback(nil, msg.Channel, msg.Payload)
+		}
 
+	END:
 		callback(errors.New("func UnSubscribe be called"), "", nil)
 	}()
 }
 
 func (mr *KRedis) Stop() {
 	// mr.CancelSubscribe()
-	mr.cancel()
+	mr.ctx.Cancel()
+	mr.ctx.Remove() // 移除上下文树中的节点
 	mr.Client.Close()
 }
 

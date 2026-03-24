@@ -1,12 +1,12 @@
 package ktest
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/khan-lau/kutils/container/kcontext"
 	"github.com/khan-lau/kutils/db/kredis"
 	"github.com/khan-lau/kutils/klogger"
 )
@@ -18,7 +18,9 @@ var (
 
 func init() {
 	klog = nil
-	ctx := context.Background()
+	mainRoot := kcontext.NewContextTree("mainCtx").GetRoot()
+	ctx := mainRoot.NewChild("redis_ctx")
+
 	redisHd = kredis.NewKRedis(ctx, "10.50.145.10", 16379, "", "WuTz@DtXyTeCh.com", 0)
 	fmt.Println("init redis success!")
 }
