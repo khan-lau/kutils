@@ -103,7 +103,7 @@ func (that *RingBuffer[T]) AsyncDequeue() (T, bool) {
 	return item, true
 }
 
-// DequeueBatch 非阻塞批量读取, 返回的新切片不要修改其内容！
+// DequeueBatch 非阻塞批量读取
 // 返回实际读取的数量（最多不超过 len(dst)）
 func (that *RingBuffer[T]) AsyncDequeueBatch(max int) ([]T, int) {
 	head := atomic.LoadUint64(&that.head)
@@ -209,7 +209,7 @@ func (that *RingBuffer[T]) DequeueBlocking(timeout time.Duration) (T, bool) {
 	}
 }
 
-// DequeueBatchBlocking 阻塞批量读取，直到读到至少1个或超时, 返回的新切片不要修改其内容！
+// DequeueBatchBlocking 阻塞批量读取，直到读到至少1个或超时
 // 返回实际读取的数量
 func (that *RingBuffer[T]) DequeueBatchBlocking(max int, timeout time.Duration) ([]T, int) {
 	if max == 0 {
