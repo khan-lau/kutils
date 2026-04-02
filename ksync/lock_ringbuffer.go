@@ -141,21 +141,19 @@ func (that *LockedRingBuffer[T]) AsyncDequeueBatch(max int) ([]T, int) {
 		max = int(available)
 	}
 
+	// 始终分配新内存并拷贝
+	result := make([]T, max)
 	start := int(that.head & that.mask)
 
-	// 不跨边界：零拷贝返回子切片
+	// 不跨边界
 	if start+max <= len(that.buffer) {
-		result := that.buffer[start : start+max]
-		that.head = (that.head + uint64(max)) & that.mask
-		that.condFull.Signal() // 通知生产者空间已释放
-		return result, max
+		copy(result, that.buffer[start:start+max])
+	} else {
+		// 跨边界：需要 copy
+		n1 := len(that.buffer) - start
+		copy(result[0:n1], that.buffer[start:])
+		copy(result[n1:], that.buffer[0:max-n1])
 	}
-
-	// 跨边界：需要 copy
-	result := make([]T, max)
-	n1 := len(that.buffer) - start
-	copy(result[0:n1], that.buffer[start:])
-	copy(result[n1:], that.buffer[0:max-n1])
 
 	that.head = (that.head + uint64(max)) & that.mask
 	that.condFull.Signal() // 通知生产者空间已释放
@@ -321,20 +319,18 @@ func (that *LockedRingBuffer[T]) IsClosed() bool {
 }
 
 func (that *LockedRingBuffer[T]) dequeueBatchInternal(max int) ([]T, int) {
+	// 始终分配新内存并拷贝
+	result := make([]T, max)
 	start := int(that.head & that.mask) // 计算读取起始位置
 	if start+max <= len(that.buffer) {
-		// 无需跨边界，直接切片返回
-		result := that.buffer[start : start+max]
-		that.head = (that.head + uint64(max)) & that.mask
-		that.condFull.Signal()
-		return result, max
+		// 无需跨边界
+		copy(result, that.buffer[start:start+max])
+	} else {
+		// 跨边界情况：需要从尾部和头部两段拼接
+		n1 := len(that.buffer) - start           // 尾部可取长度
+		copy(result[0:n1], that.buffer[start:])  // 复制尾部数据
+		copy(result[n1:], that.buffer[0:max-n1]) // 复制头部数据
 	}
-
-	// 跨边界情况：需要从尾部和头部两段拼接
-	result := make([]T, max)
-	n1 := len(that.buffer) - start           // 尾部可取长度
-	copy(result[0:n1], that.buffer[start:])  // 复制尾部数据
-	copy(result[n1:], that.buffer[0:max-n1]) // 复制头部数据
 
 	that.head = (that.head + uint64(max)) & that.mask
 	that.condFull.Signal()

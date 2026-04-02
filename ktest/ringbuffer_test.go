@@ -484,12 +484,13 @@ func TestThroughput_Batch_Channel(t *testing.T) {
 		defer close(ch)
 		for !stopProducer.Load() {
 			sent := 0
+		SUB_END_LOOP:
 			for _, item := range items {
 				select {
 				case ch <- item:
 					sent++
 				default:
-					break
+					break SUB_END_LOOP
 				}
 			}
 			if sent > 0 {
@@ -699,12 +700,13 @@ func testBatchThroughputChannel(t *testing.T, batchSize int) {
 		defer close(ch)
 		for !stopProducer.Load() {
 			sent := 0
+		SUB_END_LOOP:
 			for _, item := range items {
 				select {
 				case ch <- item:
 					sent++
 				default:
-					break
+					break SUB_END_LOOP
 				}
 			}
 			if sent > 0 {

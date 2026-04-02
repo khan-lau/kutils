@@ -118,20 +118,19 @@ func (that *RingBuffer[T]) AsyncDequeueBatch(max int) ([]T, int) {
 		max = int(available)
 	}
 
+	// 始终分配新内存并拷贝
+	result := make([]T, max)
 	start := int(head & that.mask)
 
-	// 不跨边界：零拷贝返回子切片
+	// 不跨边界
 	if start+max <= len(that.buffer) {
-		result := that.buffer[start : start+max]
-		atomic.StoreUint64(&that.head, (head+uint64(max))&that.mask)
-		return result, max
+		copy(result, that.buffer[start:start+max])
+	} else {
+		// 跨边界：需要 copy
+		n1 := len(that.buffer) - start
+		copy(result[0:n1], that.buffer[start:])
+		copy(result[n1:], that.buffer[0:max-n1])
 	}
-
-	// 跨边界：需要 copy
-	result := make([]T, max)
-	n1 := len(that.buffer) - start
-	copy(result[0:n1], that.buffer[start:])
-	copy(result[n1:], that.buffer[0:max-n1])
 
 	atomic.StoreUint64(&that.head, (head+uint64(max))&that.mask)
 	return result, max
