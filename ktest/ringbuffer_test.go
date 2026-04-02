@@ -358,7 +358,7 @@ func TestThroughput_Batch_RingBuffer(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for !stopProducer.Load() {
-			n := rb.AsyncEnqueueBatch(items...)
+			n := rb.AsyncEnqueueBatch(items)
 			if n > 0 {
 				produced.Add(int64(n))
 			}
@@ -420,7 +420,7 @@ func TestThroughput_Batch_LockedRingBuffer(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for !stopProducer.Load() {
-			n := rb.AsyncEnqueueBatch(items...)
+			n := rb.AsyncEnqueueBatch(items)
 			if n > 0 {
 				produced.Add(int64(n))
 			}
@@ -596,7 +596,7 @@ func testBatchThroughputRingBuffer(t *testing.T, batchSize int) {
 	go func() {
 		defer wg.Done()
 		for !stopProducer.Load() {
-			n := rb.AsyncEnqueueBatch(items...)
+			n := rb.AsyncEnqueueBatch(items)
 			if n > 0 {
 				produced.Add(int64(n))
 			}
@@ -647,7 +647,7 @@ func testBatchThroughputLockedRingBuffer(t *testing.T, batchSize int) {
 	go func() {
 		defer wg.Done()
 		for !stopProducer.Load() {
-			n := rb.AsyncEnqueueBatch(items...)
+			n := rb.AsyncEnqueueBatch(items)
 			if n > 0 {
 				produced.Add(int64(n))
 			}

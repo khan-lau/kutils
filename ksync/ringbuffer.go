@@ -7,7 +7,11 @@ import (
 )
 
 // SPSC Ring Buffer - Single Producer Single Consumer
+//
 // 容量必须是 2 的幂次方: 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536
+//
+// 该 RingBuffer 严禁 用于多生产者或多消费者场景。如果有多个 Goroutine 同时调用 Enqueue，会导致 tail 指针竞争导致数据覆盖；若有多个 Goroutine 同时调用 Dequeue，则会导致同一份数据被读取多次。
+// 只要严格遵守 SPSC 的使用约束
 type RingBuffer[T any] struct {
 	_      [8]uint64 // 填充，防止与前面的字段伪共享
 	head   uint64
@@ -46,14 +50,14 @@ func (that *RingBuffer[T]) AsyncEnqueue(item T) bool {
 		return false
 	}
 
-	that.buffer[tail] = item
+	that.buffer[tail&that.mask] = item
 	atomic.StoreUint64(&that.tail, nextTail)
 	return true
 }
 
 // AsyncEnqueueBatch 非阻塞批量写入
 // 返回实际成功写入的数量（可能小于 len(items)）
-func (that *RingBuffer[T]) AsyncEnqueueBatch(items ...T) int {
+func (that *RingBuffer[T]) AsyncEnqueueBatch(items []T) int {
 	if len(items) == 0 {
 		return 0
 	}
@@ -98,7 +102,7 @@ func (that *RingBuffer[T]) AsyncDequeue() (T, bool) {
 		return zero, false
 	}
 
-	item := that.buffer[head]
+	item := that.buffer[head&that.mask]
 	atomic.StoreUint64(&that.head, (head+1)&that.mask)
 	return item, true
 }
@@ -136,6 +140,42 @@ func (that *RingBuffer[T]) AsyncDequeueBatch(max int) ([]T, int) {
 	return result, max
 }
 
+// AsyncDequeueTo 非阻塞读取数据到提供的 dst 切片中
+// 返回实际读取的数量
+func (that *RingBuffer[T]) AsyncDequeueTo(dst []T) int {
+	if len(dst) == 0 {
+		return 0
+	}
+
+	head := atomic.LoadUint64(&that.head)
+	tail := atomic.LoadUint64(&that.tail)
+
+	available := (tail - head) & that.mask
+	if available == 0 {
+		return 0
+	}
+
+	n := len(dst)
+	if uint64(n) > available {
+		n = int(available)
+	}
+
+	start := int(head & that.mask)
+	// 情况1: 不跨边界
+	if start+n <= len(that.buffer) {
+		copy(dst[:n], that.buffer[start:start+n])
+	} else {
+		// 情况2: 跨边界
+		n1 := len(that.buffer) - start
+		copy(dst[:n1], that.buffer[start:])
+		copy(dst[n1:n], that.buffer[0:n-n1])
+	}
+
+	// 原子更新 head，释放空间
+	atomic.StoreUint64(&that.head, (head+uint64(n))&that.mask)
+	return n
+}
+
 // ====================== 阻塞接口 ======================
 
 // Enqueue 阻塞写入单个元素，直到成功或超时
@@ -162,7 +202,7 @@ func (that *RingBuffer[T]) Enqueue(timeout time.Duration, item T) bool {
 
 // EnqueueBatchBlocking 阻塞批量写入，直到全部写入或超时
 // 返回实际写入数量（超时情况下可能 < len(items)）
-func (that *RingBuffer[T]) EnqueueBatchBlocking(timeout time.Duration, items ...T) int {
+func (that *RingBuffer[T]) EnqueueBatch(timeout time.Duration, items []T) int {
 	if len(items) == 0 {
 		return 0
 	}
@@ -172,7 +212,7 @@ func (that *RingBuffer[T]) EnqueueBatchBlocking(timeout time.Duration, items ...
 	}
 	written := 0
 	for written < len(items) {
-		n := that.AsyncEnqueueBatch(items[written:]...)
+		n := that.AsyncEnqueueBatch(items[written:])
 		written += n
 
 		if written == len(items) {
@@ -189,7 +229,7 @@ func (that *RingBuffer[T]) EnqueueBatchBlocking(timeout time.Duration, items ...
 }
 
 // DequeueBlocking 阻塞读取单个元素，直到成功或超时
-func (that *RingBuffer[T]) DequeueBlocking(timeout time.Duration) (T, bool) {
+func (that *RingBuffer[T]) Dequeue(timeout time.Duration) (T, bool) {
 	deadline := time.Time{}
 	if timeout > 0 {
 		deadline = time.Now().Add(timeout)
@@ -211,7 +251,7 @@ func (that *RingBuffer[T]) DequeueBlocking(timeout time.Duration) (T, bool) {
 
 // DequeueBatchBlocking 阻塞批量读取，直到读到至少1个或超时
 // 返回实际读取的数量
-func (that *RingBuffer[T]) DequeueBatchBlocking(max int, timeout time.Duration) ([]T, int) {
+func (that *RingBuffer[T]) DequeueBatch(max int, timeout time.Duration) ([]T, int) {
 	if max == 0 {
 		return nil, 0
 	}
@@ -227,6 +267,31 @@ func (that *RingBuffer[T]) DequeueBatchBlocking(max int, timeout time.Duration) 
 		if timeout > 0 && time.Now().After(deadline) {
 			return nil, 0
 		}
+		time.Sleep(1 * time.Microsecond)
+	}
+}
+
+// DequeueTo 阻塞读取数据到 dst 中，直到读到至少一个数据或超时
+func (that *RingBuffer[T]) DequeueTo(dst []T, timeout time.Duration) int {
+	if len(dst) == 0 {
+		return 0
+	}
+
+	deadline := time.Time{}
+	if timeout > 0 {
+		deadline = time.Now().Add(timeout)
+	}
+
+	for {
+		if n := that.AsyncDequeueTo(dst); n > 0 {
+			return n
+		}
+
+		if timeout > 0 && time.Now().After(deadline) {
+			return 0
+		}
+
+		// 降低忙轮询开销
 		time.Sleep(1 * time.Microsecond)
 	}
 }

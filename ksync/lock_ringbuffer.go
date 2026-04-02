@@ -41,7 +41,7 @@ func (that *LockedRingBuffer[T]) AsyncEnqueue(item T) bool {
 	defer that.mu.Unlock()
 
 	// 检查队列是否已满或已关闭
-	if that.closed || ((that.tail+1)&that.mask) == that.head {
+	if that.closed || that.buffer == nil || ((that.tail+1)&that.mask) == that.head {
 		return false
 	}
 
@@ -53,7 +53,7 @@ func (that *LockedRingBuffer[T]) AsyncEnqueue(item T) bool {
 }
 
 // AsyncEnqueueBatch 非阻塞批量写入
-func (that *LockedRingBuffer[T]) AsyncEnqueueBatch(items ...T) int {
+func (that *LockedRingBuffer[T]) AsyncEnqueueBatch(items []T) int {
 	if len(items) == 0 {
 		return 0
 	}
@@ -63,7 +63,7 @@ func (that *LockedRingBuffer[T]) AsyncEnqueueBatch(items ...T) int {
 	}
 	defer that.mu.Unlock()
 
-	if that.closed {
+	if that.closed || that.buffer == nil {
 		return 0
 	}
 
@@ -104,12 +104,12 @@ func (that *LockedRingBuffer[T]) AsyncDequeue() (T, bool) {
 	}
 	defer that.mu.Unlock()
 
-	if that.closed || that.head == that.tail {
+	if that.closed || that.buffer == nil || that.head == that.tail {
 		var zero T
 		return zero, false
 	}
 
-	item := that.buffer[that.head]
+	item := that.buffer[that.head&that.mask]
 	that.head = (that.head + 1) & that.mask
 	that.condFull.Signal() // 通知生产者空间已释放
 	return item, true
@@ -127,13 +127,17 @@ func (that *LockedRingBuffer[T]) AsyncDequeue() (T, bool) {
 //
 //   - 读取到的数量
 func (that *LockedRingBuffer[T]) AsyncDequeueBatch(max int) ([]T, int) {
+	if max <= 0 {
+		return nil, 0
+	}
 	if !that.mu.TryLock() {
 		return nil, 0
 	}
 	defer that.mu.Unlock()
 
 	available := (that.tail - that.head) & that.mask
-	if available == 0 {
+	// 如果队列满, 则直接返回
+	if that.closed || that.buffer == nil || available == 0 {
 		return nil, 0
 	}
 
@@ -160,6 +164,53 @@ func (that *LockedRingBuffer[T]) AsyncDequeueBatch(max int) ([]T, int) {
 	return result, max
 }
 
+// AsyncDequeueTo 非阻塞地将数据拷贝到调用方提供的 dst 切片中
+// 返回实际拷贝的元素数量（0 表示队列为空或 dst 长度为0）
+// 这是非阻塞版本，不会等待
+func (that *LockedRingBuffer[T]) AsyncDequeueTo(dst []T) int {
+	if len(dst) == 0 {
+		return 0
+	}
+
+	if !that.mu.TryLock() {
+		return 0
+	}
+	defer that.mu.Unlock()
+
+	available := (that.tail - that.head) & that.mask
+	// 如果队列满, 则直接返回
+	if that.closed || that.buffer == nil || available == 0 {
+		return 0
+	}
+
+	// 实际能拷贝的数量不能超过 dst 的长度和可用数据量
+	n := len(dst)
+	if uint64(n) > available {
+		n = int(available)
+	}
+
+	start := int(that.head & that.mask)
+
+	// 优化：不跨边界时直接 copy，跨边界时分两段 copy
+	if start+n <= len(that.buffer) {
+		// 不跨边界：单次 copy
+		copy(dst, that.buffer[start:start+n])
+	} else {
+		// 跨边界：需要从尾部和头部两段拷贝
+		n1 := len(that.buffer) - start
+		copy(dst[0:n1], that.buffer[start:])
+		copy(dst[n1:], that.buffer[0:n-n1])
+	}
+
+	// 更新 head 指针（环形前进）
+	that.head = (that.head + uint64(n)) & that.mask
+
+	// 通知生产者有空间可用
+	that.condFull.Signal()
+
+	return n
+}
+
 // ====================== 阻塞接口（正常 Cond 实现） ======================
 
 // Enqueue 阻塞写入单个元素，直到成功或超时
@@ -167,7 +218,7 @@ func (that *LockedRingBuffer[T]) Enqueue(item T) bool {
 	that.mu.Lock()
 	defer that.mu.Unlock()
 
-	if that.closed {
+	if that.closed || that.buffer == nil {
 		return false
 	}
 
@@ -185,7 +236,7 @@ func (that *LockedRingBuffer[T]) Enqueue(item T) bool {
 }
 
 // EnqueueBatch 阻塞批量写入，直到全部写入或超时
-func (that *LockedRingBuffer[T]) EnqueueBatch(items ...T) int {
+func (that *LockedRingBuffer[T]) EnqueueBatch(items []T) int {
 	if len(items) == 0 {
 		return 0
 	}
@@ -193,12 +244,16 @@ func (that *LockedRingBuffer[T]) EnqueueBatch(items ...T) int {
 	that.mu.Lock()
 	defer that.mu.Unlock()
 
-	if that.closed {
+	if that.closed || that.buffer == nil {
 		return 0
 	}
 
 	written := 0
 	for written < len(items) {
+		// 队列关闭或超时, 直接退出, 否则等待
+		if that.closed || that.buffer == nil {
+			return written
+		}
 		available := (that.head - that.tail - 1) & that.mask
 
 		if available > 0 {
@@ -210,7 +265,7 @@ func (that *LockedRingBuffer[T]) EnqueueBatch(items ...T) int {
 
 			start := int(that.tail & that.mask)
 
-			// 优化点：使用 copy 替代循环赋值
+			// 使用 copy 替代循环赋值
 			if start+canWrite <= len(that.buffer) {
 				copy(that.buffer[start:start+canWrite], items[written:written+canWrite])
 			} else {
@@ -221,15 +276,22 @@ func (that *LockedRingBuffer[T]) EnqueueBatch(items ...T) int {
 
 			that.tail = (that.tail + uint64(canWrite)) & that.mask
 			written += canWrite
-			that.condEmpty.Signal()
 			continue
 		}
 
+		// 走到这里说明：当前 buffer 满了，但 items 还没写完
+		if written > 0 {
+			that.condEmpty.Signal() // 缓冲区满了，赶紧通知消费者来读
+		}
 		// 队列关闭或超时, 直接退出, 否则等待
-		if that.closed {
+		if that.closed || that.buffer == nil {
 			return written
 		}
 		that.condFull.Wait()
+	}
+
+	if written > 0 {
+		that.condEmpty.Signal() // 全部写完退出前，最后通知一次
 	}
 
 	return written
@@ -242,14 +304,14 @@ func (that *LockedRingBuffer[T]) Dequeue() (T, bool) {
 
 	// 若队列为空
 	for that.head == that.tail {
-		if that.closed {
+		if that.closed || that.buffer == nil {
 			var zero T
 			return zero, false
 		}
 		that.condEmpty.Wait() // 等待生产者入队数据
 	}
 
-	item := that.buffer[that.head]
+	item := that.buffer[that.head&that.mask]
 	that.head = (that.head + 1) & that.mask
 	that.condFull.Signal() // 通知生产者空间已释放
 	return item, true
@@ -262,7 +324,6 @@ func (that *LockedRingBuffer[T]) Dequeue() (T, bool) {
 //
 // 参数:
 //   - max: 最大读取数量，必须大于0
-//   - timeout: 超时等待时间，<=0 表示无限等待
 //
 // 返回:
 //   - []T: 取出的元素数组
@@ -276,7 +337,7 @@ func (that *LockedRingBuffer[T]) DequeueBatch(max int) ([]T, int) {
 	defer that.mu.Unlock()
 
 	for {
-		if that.closed {
+		if that.closed || that.buffer == nil {
 			return nil, 0
 		}
 
@@ -287,7 +348,51 @@ func (that *LockedRingBuffer[T]) DequeueBatch(max int) ([]T, int) {
 			}
 			return that.dequeueBatchInternal(max)
 		}
+
+		if that.closed {
+			return nil, 0
+		}
 		that.condEmpty.Wait() // 等待数据
+	}
+}
+
+// 阻塞 DequeueTo, 将数据读取到 dst 中, 返回实际读取到的元素数量.
+// 若缓冲区为空, 则继续阻塞直到数据可用、超时或缓冲区关闭.
+// 若dst容量大于Buffer容量, 则一次性读取完Buffer中所有数据.
+// 若dst容量小于等于Buffer容量, 则最多读取dst长度个元素.
+func (that *LockedRingBuffer[T]) DequeueTo(dst []T) int {
+	if len(dst) == 0 {
+		return 0
+	}
+
+	that.mu.Lock()
+	defer that.mu.Unlock()
+
+	for {
+		available := (that.tail - that.head) & that.mask
+		if available > 0 {
+			n := len(dst)
+			if uint64(n) > available {
+				n = int(available)
+			}
+
+			start := int(that.head & that.mask)
+			if start+n <= len(that.buffer) {
+				copy(dst, that.buffer[start:start+n])
+			} else {
+				n1 := len(that.buffer) - start
+				copy(dst, that.buffer[start:])
+				copy(dst[n1:], that.buffer[0:n-n1])
+			}
+			that.head = (that.head + uint64(n)) & that.mask
+			that.condFull.Signal()
+			return n
+		}
+
+		if that.closed || that.buffer == nil {
+			return 0
+		}
+		that.condEmpty.Wait()
 	}
 }
 
@@ -297,18 +402,22 @@ func (that *LockedRingBuffer[T]) DequeueBatch(max int) ([]T, int) {
 func (that *LockedRingBuffer[T]) Close() {
 	that.mu.Lock()
 	that.closed = true
+	that.buffer = nil
 	that.condFull.Broadcast()  // 唤醒所有等待队列满的生产者
 	that.condEmpty.Broadcast() // 唤醒所有等待队列空的消费者
 	that.mu.Unlock()
 }
 
-func (that *LockedRingBuffer[T]) Len() int {
+func (that *LockedRingBuffer[T]) Len() uint64 {
 	that.mu.Lock()
 	defer that.mu.Unlock()
-	return int((that.tail - that.head) & that.mask)
+	lenVal := (that.tail - that.head) & that.mask
+	return lenVal
 }
 
 func (that *LockedRingBuffer[T]) Cap() uint64 {
+	that.mu.Lock()
+	defer that.mu.Unlock()
 	return uint64(len(that.buffer))
 }
 
@@ -319,6 +428,9 @@ func (that *LockedRingBuffer[T]) IsClosed() bool {
 }
 
 func (that *LockedRingBuffer[T]) dequeueBatchInternal(max int) ([]T, int) {
+	if max <= 0 {
+		return nil, 0
+	}
 	// 始终分配新内存并拷贝
 	result := make([]T, max)
 	start := int(that.head & that.mask) // 计算读取起始位置
