@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/khan-lau/kutils/katomic"
+	"github.com/khan-lau/kutils/ksync"
 )
 
 func TestSafeChannel_RaceCondition(t *testing.T) {
@@ -16,7 +16,7 @@ func TestSafeChannel_RaceCondition(t *testing.T) {
 		bufferSize    = 100
 	)
 
-	sc := katomic.NewSafeChannel[int](bufferSize)
+	sc := ksync.NewSafeChannel[int](bufferSize)
 	var wg sync.WaitGroup
 	var totalSent, totalOutdated, totalClosed int64
 
@@ -30,9 +30,9 @@ func TestSafeChannel_RaceCondition(t *testing.T) {
 				switch err {
 				case nil:
 					atomic.AddInt64(&totalSent, 1)
-				case katomic.ErrGenerationOutdated:
+				case ksync.ErrGenerationOutdated:
 					atomic.AddInt64(&totalOutdated, 1)
-				case katomic.ErrChannelClosed:
+				case ksync.ErrChannelClosed:
 					atomic.AddInt64(&totalClosed, 1)
 				}
 				// 模拟业务耗时，增加竞态发生的概率
@@ -88,7 +88,7 @@ func BenchmarkNativeChannel(b *testing.B) {
 }
 
 func BenchmarkSafeChannel_Send(b *testing.B) {
-	sc := katomic.NewSafeChannel[int](1000)
+	sc := ksync.NewSafeChannel[int](1000)
 
 	// 启动一个后台协程不断消费，防止阻塞
 	done := make(chan struct{})

@@ -1,4 +1,4 @@
-package katomic
+package ksync
 
 import (
 	"errors"
