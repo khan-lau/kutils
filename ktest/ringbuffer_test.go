@@ -898,19 +898,6 @@ func TestThroughput_Batch_DequeueTo_Comparison(t *testing.T) {
 	t.Run("LockedRingBuffer_DequeueTo", TestThroughput_Batch_DequeueTo_LockedRingBuffer)
 }
 
-// TestThroughput_Batch_DequeueTo_vs_DequeueBatch 对比 DequeueTo 与 DequeueBatch 性能差异
-func TestThroughput_Batch_DequeueTo_vs_DequeueBatch(t *testing.T) {
-	t.Log("========== DequeueTo vs DequeueBatch 性能对比 ==========")
-
-	t.Log("\n--- RingBuffer ---")
-	t.Run("RingBuffer_DequeueBatch", TestThroughput_Batch_RingBuffer)
-	t.Run("RingBuffer_DequeueTo", TestThroughput_Batch_DequeueTo_RingBuffer)
-
-	t.Log("\n--- LockedRingBuffer ---")
-	t.Run("LockedRingBuffer_DequeueBatch", TestThroughput_Batch_LockedRingBuffer)
-	t.Run("LockedRingBuffer_DequeueTo", TestThroughput_Batch_DequeueTo_LockedRingBuffer)
-}
-
 // TestThroughput_Batch_DequeueTo_DifferentSizes 不同批次大小 DequeueTo 性能测试
 func TestThroughput_Batch_DequeueTo_DifferentSizes(t *testing.T) {
 	batchSizes := []int{16, 32, 64, 128, 256}
