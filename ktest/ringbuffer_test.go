@@ -581,7 +581,7 @@ func TestThroughput_Batch_DifferentSizes(t *testing.T) {
 
 func testBatchThroughputRingBuffer(t *testing.T, batchSize int) {
 	rb, _ := ksync.NewRingBuffer[int](65536)
-	const testDuration = 2 * time.Second
+	const testDuration = 10 * time.Second
 
 	items := make([]int, batchSize)
 	for i := range items {
@@ -632,7 +632,7 @@ func testBatchThroughputRingBuffer(t *testing.T, batchSize int) {
 
 func testBatchThroughputLockedRingBuffer(t *testing.T, batchSize int) {
 	rb, _ := ksync.NewLockedRingBuffer[int](65536)
-	const testDuration = 2 * time.Second
+	const testDuration = 10 * time.Second
 
 	items := make([]int, batchSize)
 	for i := range items {
@@ -683,7 +683,7 @@ func testBatchThroughputLockedRingBuffer(t *testing.T, batchSize int) {
 
 func testBatchThroughputChannel(t *testing.T, batchSize int) {
 	ch := make(chan int, 65536)
-	const testDuration = 2 * time.Second
+	const testDuration = 10 * time.Second
 
 	items := make([]int, batchSize)
 	for i := range items {
