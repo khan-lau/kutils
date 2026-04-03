@@ -223,7 +223,7 @@ func (that *LockedRingBuffer[T]) Enqueue(item T) bool {
 	}
 
 	for ((that.tail + 1) & that.mask) == that.head { // 队列已满时等待
-		if that.closed { // 超时或已关闭则退出
+		if that.closed || that.buffer == nil { // 超时或已关闭则退出
 			return false
 		}
 		that.condFull.Wait() // 等待空间释放
@@ -276,22 +276,11 @@ func (that *LockedRingBuffer[T]) EnqueueBatch(items []T) int {
 
 			that.tail = (that.tail + uint64(canWrite)) & that.mask
 			written += canWrite
+
+			that.condEmpty.Signal() // 缓冲区满了，赶紧通知消费者来读
 			continue
 		}
-
-		// 走到这里说明：当前 buffer 满了，但 items 还没写完
-		if written > 0 {
-			that.condEmpty.Signal() // 缓冲区满了，赶紧通知消费者来读
-		}
-		// 队列关闭或超时, 直接退出, 否则等待
-		if that.closed || that.buffer == nil {
-			return written
-		}
-		that.condFull.Wait()
-	}
-
-	if written > 0 {
-		that.condEmpty.Signal() // 全部写完退出前，最后通知一次
+		that.condFull.Wait() // 队列已满，需要等待消费者消费, spurious wakeup 会由外层 for 循环重新检查 available,
 	}
 
 	return written
@@ -402,7 +391,7 @@ func (that *LockedRingBuffer[T]) DequeueTo(dst []T) int {
 func (that *LockedRingBuffer[T]) Close() {
 	that.mu.Lock()
 	that.closed = true
-	that.buffer = nil
+	// that.buffer = nil
 	that.condFull.Broadcast()  // 唤醒所有等待队列满的生产者
 	that.condEmpty.Broadcast() // 唤醒所有等待队列空的消费者
 	that.mu.Unlock()
@@ -411,6 +400,9 @@ func (that *LockedRingBuffer[T]) Close() {
 func (that *LockedRingBuffer[T]) Len() uint64 {
 	that.mu.Lock()
 	defer that.mu.Unlock()
+	if that.closed || that.buffer == nil {
+		return 0
+	}
 	lenVal := (that.tail - that.head) & that.mask
 	return lenVal
 }
@@ -418,6 +410,9 @@ func (that *LockedRingBuffer[T]) Len() uint64 {
 func (that *LockedRingBuffer[T]) Cap() uint64 {
 	that.mu.Lock()
 	defer that.mu.Unlock()
+	if that.closed || that.buffer == nil {
+		return 0
+	}
 	return uint64(len(that.buffer))
 }
 
