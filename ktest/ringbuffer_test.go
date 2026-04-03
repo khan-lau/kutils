@@ -755,3 +755,305 @@ func testBatchThroughputChannel(t *testing.T, batchSize int) {
 	throughput := consumed.Load() / int64(testDuration.Seconds())
 	t.Logf("[Channel] 批次=%d, 吞吐量: %d 条/秒", batchSize, throughput)
 }
+
+// ============================================================
+// 批量操作吞吐量测试 - DequeueTo 零分配版本
+// ============================================================
+
+// TestThroughput_Batch_DequeueTo_RingBuffer RingBuffer DequeueTo 零分配吞吐量测试
+func TestThroughput_Batch_DequeueTo_RingBuffer(t *testing.T) {
+	rb, _ := ksync.NewRingBuffer[int](65536)
+	const testDuration = 3 * time.Second
+	const batchSize = 64
+
+	items := make([]int, batchSize)
+	for i := range items {
+		items[i] = i
+	}
+
+	// 预分配消费者缓冲区 - 零分配关键
+	dst := make([]int, batchSize)
+
+	var produced, consumed atomic.Int64
+	var stopProducer atomic.Bool
+	var wg sync.WaitGroup
+
+	// 生产者 - 批量写入
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for !stopProducer.Load() {
+			n := rb.AsyncEnqueueBatch(items)
+			if n > 0 {
+				produced.Add(int64(n))
+			}
+			if n < batchSize {
+				runtime.Gosched()
+			}
+		}
+	}()
+
+	// 消费者 - DequeueTo 零分配读取
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			n := rb.AsyncDequeueTo(dst)
+			if n > 0 {
+				consumed.Add(int64(n))
+			} else {
+				if stopProducer.Load() && rb.IsEmpty() {
+					return
+				}
+				runtime.Gosched()
+			}
+		}
+	}()
+
+	time.Sleep(testDuration)
+	stopProducer.Store(true)
+	wg.Wait()
+
+	producedCount := produced.Load()
+	consumedCount := consumed.Load()
+
+	if producedCount != consumedCount {
+		t.Errorf("[RingBuffer DequeueTo] 数据不一致! 生产: %d, 消费: %d", producedCount, consumedCount)
+	}
+
+	throughput := consumedCount / int64(testDuration.Seconds())
+	t.Logf("[RingBuffer DequeueTo] 吞吐量: %d 条/秒, 总处理: %d, 批次大小: %d (零分配)", throughput, consumedCount, batchSize)
+}
+
+// TestThroughput_Batch_DequeueTo_LockedRingBuffer LockedRingBuffer DequeueTo 零分配吞吐量测试
+func TestThroughput_Batch_DequeueTo_LockedRingBuffer(t *testing.T) {
+	rb, _ := ksync.NewLockedRingBuffer[int](65536)
+	const testDuration = 3 * time.Second
+	const batchSize = 64
+
+	items := make([]int, batchSize)
+	for i := range items {
+		items[i] = i
+	}
+
+	// 预分配消费者缓冲区 - 零分配关键
+	dst := make([]int, batchSize)
+
+	var produced, consumed atomic.Int64
+	var stopProducer atomic.Bool
+	var wg sync.WaitGroup
+
+	// 生产者 - 批量写入
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for !stopProducer.Load() {
+			n := rb.AsyncEnqueueBatch(items)
+			if n > 0 {
+				produced.Add(int64(n))
+			}
+			if n < batchSize {
+				runtime.Gosched()
+			}
+		}
+	}()
+
+	// 消费者 - DequeueTo 零分配读取
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			n := rb.AsyncDequeueTo(dst)
+			if n > 0 {
+				consumed.Add(int64(n))
+			} else {
+				if stopProducer.Load() && rb.Len() == 0 {
+					return
+				}
+				runtime.Gosched()
+			}
+		}
+	}()
+
+	time.Sleep(testDuration)
+	stopProducer.Store(true)
+	wg.Wait()
+
+	producedCount := produced.Load()
+	consumedCount := consumed.Load()
+
+	if producedCount != consumedCount {
+		t.Errorf("[LockedRingBuffer DequeueTo] 数据不一致! 生产: %d, 消费: %d", producedCount, consumedCount)
+	}
+
+	throughput := consumedCount / int64(testDuration.Seconds())
+	t.Logf("[LockedRingBuffer DequeueTo] 吞吐量: %d 条/秒, 总处理: %d, 批次大小: %d (零分配)", throughput, consumedCount, batchSize)
+}
+
+// TestThroughput_Batch_DequeueTo_Comparison DequeueTo 零分配版本对比测试
+func TestThroughput_Batch_DequeueTo_Comparison(t *testing.T) {
+	t.Log("========== DequeueTo 零分配版本吞吐量对比 (batchSize=64) ==========")
+
+	t.Run("RingBuffer_DequeueTo", TestThroughput_Batch_DequeueTo_RingBuffer)
+	t.Run("LockedRingBuffer_DequeueTo", TestThroughput_Batch_DequeueTo_LockedRingBuffer)
+}
+
+// TestThroughput_Batch_DequeueTo_vs_DequeueBatch 对比 DequeueTo 与 DequeueBatch 性能差异
+func TestThroughput_Batch_DequeueTo_vs_DequeueBatch(t *testing.T) {
+	t.Log("========== DequeueTo vs DequeueBatch 性能对比 ==========")
+
+	t.Log("\n--- RingBuffer ---")
+	t.Run("RingBuffer_DequeueBatch", TestThroughput_Batch_RingBuffer)
+	t.Run("RingBuffer_DequeueTo", TestThroughput_Batch_DequeueTo_RingBuffer)
+
+	t.Log("\n--- LockedRingBuffer ---")
+	t.Run("LockedRingBuffer_DequeueBatch", TestThroughput_Batch_LockedRingBuffer)
+	t.Run("LockedRingBuffer_DequeueTo", TestThroughput_Batch_DequeueTo_LockedRingBuffer)
+}
+
+// TestThroughput_Batch_DequeueTo_DifferentSizes 不同批次大小 DequeueTo 性能测试
+func TestThroughput_Batch_DequeueTo_DifferentSizes(t *testing.T) {
+	batchSizes := []int{16, 32, 64, 128, 256}
+
+	t.Log("========== DequeueTo 不同批次大小吞吐量对比 ==========")
+
+	for _, size := range batchSizes {
+		t.Logf("\n--- 批次大小: %d ---", size)
+
+		// RingBuffer DequeueTo
+		t.Run(fmt.Sprintf("RingBuffer_DequeueTo_%d", size), func(t *testing.T) {
+			testDequeueToThroughputRingBuffer(t, size)
+		})
+
+		// LockedRingBuffer DequeueTo
+		t.Run(fmt.Sprintf("LockedRingBuffer_DequeueTo_%d", size), func(t *testing.T) {
+			testDequeueToThroughputLockedRingBuffer(t, size)
+		})
+
+		// Channel
+		t.Run(fmt.Sprintf("Channel_Batch_%d", size), func(t *testing.T) {
+			testBatchThroughputChannel(t, size)
+		})
+	}
+}
+
+func testDequeueToThroughputRingBuffer(t *testing.T, batchSize int) {
+	rb, _ := ksync.NewRingBuffer[int](65536)
+	const testDuration = 10 * time.Second
+
+	items := make([]int, batchSize)
+	for i := range items {
+		items[i] = i
+	}
+
+	// 预分配消费者缓冲区
+	dst := make([]int, batchSize)
+
+	var produced, consumed atomic.Int64
+	var stopProducer atomic.Bool
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for !stopProducer.Load() {
+			n := rb.AsyncEnqueueBatch(items)
+			if n > 0 {
+				produced.Add(int64(n))
+			}
+			if n < batchSize {
+				runtime.Gosched()
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			n := rb.AsyncDequeueTo(dst)
+			if n > 0 {
+				consumed.Add(int64(n))
+			} else {
+				if stopProducer.Load() && rb.IsEmpty() {
+					return
+				}
+				runtime.Gosched()
+			}
+		}
+	}()
+
+	time.Sleep(testDuration)
+	stopProducer.Store(true)
+	wg.Wait()
+
+	throughput := consumed.Load() / int64(testDuration.Seconds())
+	t.Logf("[RingBuffer DequeueTo] 批次=%d, 吞吐量: %d 条/秒 (零分配)", batchSize, throughput)
+}
+
+func testDequeueToThroughputLockedRingBuffer(t *testing.T, batchSize int) {
+	rb, _ := ksync.NewLockedRingBuffer[int](65536)
+	const testDuration = 10 * time.Second
+
+	items := make([]int, batchSize)
+	for i := range items {
+		items[i] = i
+	}
+
+	// 预分配消费者缓冲区
+	dst := make([]int, batchSize)
+
+	var produced, consumed atomic.Int64
+	var stopProducer atomic.Bool
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for !stopProducer.Load() {
+			n := rb.AsyncEnqueueBatch(items)
+			if n > 0 {
+				produced.Add(int64(n))
+			}
+			if n < batchSize {
+				runtime.Gosched()
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			n := rb.AsyncDequeueTo(dst)
+			if n > 0 {
+				consumed.Add(int64(n))
+			} else {
+				if stopProducer.Load() && rb.Len() == 0 {
+					return
+				}
+				runtime.Gosched()
+			}
+		}
+	}()
+
+	time.Sleep(testDuration)
+	stopProducer.Store(true)
+	wg.Wait()
+
+	throughput := consumed.Load() / int64(testDuration.Seconds())
+	t.Logf("[LockedRingBuffer DequeueTo] 批次=%d, 吞吐量: %d 条/秒 (零分配)", batchSize, throughput)
+}
+
+// TestThroughput_All_Batch_Comparison 全部批量操作综合对比
+func TestThroughput_All_Batch_Comparison(t *testing.T) {
+	t.Log("========== 批量操作全面对比 (DequeueBatch vs DequeueTo) ==========")
+
+	t.Log("\n========== DequeueBatch 版本 ==========")
+	t.Run("RingBuffer_Batch", TestThroughput_Batch_RingBuffer)
+	t.Run("LockedRingBuffer_Batch", TestThroughput_Batch_LockedRingBuffer)
+
+	t.Log("\n========== DequeueTo 零分配版本 ==========")
+	t.Run("RingBuffer_DequeueTo", TestThroughput_Batch_DequeueTo_RingBuffer)
+	t.Run("LockedRingBuffer_DequeueTo", TestThroughput_Batch_DequeueTo_LockedRingBuffer)
+}
