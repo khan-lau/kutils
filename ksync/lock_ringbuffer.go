@@ -104,7 +104,7 @@ func (that *LockedRingBuffer[T]) AsyncDequeue() (T, bool) {
 	}
 	defer that.mu.Unlock()
 
-	if that.closed || that.buffer == nil || that.head == that.tail {
+	if that.buffer == nil || that.head == that.tail {
 		var zero T
 		return zero, false
 	}
@@ -136,8 +136,8 @@ func (that *LockedRingBuffer[T]) AsyncDequeueBatch(max int) ([]T, int) {
 	defer that.mu.Unlock()
 
 	available := (that.tail - that.head) & that.mask
-	// 如果队列满, 则直接返回
-	if that.closed || that.buffer == nil || available == 0 {
+	// 如果队列空, 则直接返回
+	if that.buffer == nil || available == 0 {
 		return nil, 0
 	}
 
@@ -155,7 +155,7 @@ func (that *LockedRingBuffer[T]) AsyncDequeueBatch(max int) ([]T, int) {
 	} else {
 		// 跨边界：需要 copy
 		n1 := len(that.buffer) - start
-		copy(result[0:n1], that.buffer[start:])
+		copy(result[0:n1], that.buffer[start:start+n1])
 		copy(result[n1:], that.buffer[0:max-n1])
 	}
 
@@ -198,7 +198,179 @@ func (that *LockedRingBuffer[T]) AsyncDequeueTo(dst []T) int {
 	} else {
 		// 跨边界：需要从尾部和头部两段拷贝
 		n1 := len(that.buffer) - start
-		copy(dst[0:n1], that.buffer[start:])
+		copy(dst[0:n1], that.buffer[start:start+n1])
+		copy(dst[n1:], that.buffer[0:n-n1])
+	}
+
+	// 更新 head 指针（环形前进）
+	that.head = (that.head + uint64(n)) & that.mask
+
+	// 通知生产者有空间可用
+	that.condFull.Signal()
+
+	return n
+}
+
+// ================== 阻塞接口 NoWait（正常 Cond 实现） ===================
+
+// EnqueueNoWait 阻塞单条写入
+// 如果无法获取锁，它会阻塞直到获取锁; 获取锁后，如果队列已满，立即返回 false; 如果队列有空间，则写入数据并返回 true
+func (that *LockedRingBuffer[T]) EnqueueNoWait(item T) bool {
+	that.mu.Lock()
+	defer that.mu.Unlock()
+
+	// 检查队列是否已满或已关闭
+	if that.closed || that.buffer == nil || ((that.tail+1)&that.mask) == that.head {
+		return false
+	}
+
+	// 直接使用 mask 实现环形索引
+	that.buffer[that.tail&that.mask] = item // ← 显式 & mask
+	that.tail = (that.tail + 1) & that.mask // ← 环形递增
+	that.condEmpty.Signal()                 // 通知消费者有新数据
+	return true
+}
+
+// EnqueueBatchNoWait 阻塞批量写入
+// 如果无法获取锁，它会阻塞直到获取锁; 获取锁后，如果队列已满，立即返回 0; 如果队列有空间，则写入数据并返回 实际写入的数量
+func (that *LockedRingBuffer[T]) EnqueueBatchNoWait(items []T) int {
+	if len(items) == 0 {
+		return 0
+	}
+
+	that.mu.Lock()
+	defer that.mu.Unlock()
+
+	if that.closed || that.buffer == nil {
+		return 0
+	}
+
+	available := (that.head - that.tail - 1) & that.mask
+	if available == 0 {
+		return 0
+	}
+
+	n := len(items)
+	if uint64(n) > available {
+		n = int(available)
+	}
+
+	// 批量写入 + 清晰的环形处理
+	start := int(that.tail & that.mask)
+
+	// 情况1: 不跨边界（最常见）
+	if start+n <= len(that.buffer) {
+		copy(that.buffer[start:start+n], items[:n])
+	} else {
+		// 情况2: 跨边界（环绕写入）
+		n1 := len(that.buffer) - start
+		copy(that.buffer[start:], items[:n1])
+		copy(that.buffer[0:], items[n1:n])
+	}
+
+	// 更新 tail（环形递增）
+	that.tail = (that.tail + uint64(n)) & that.mask
+	that.condEmpty.Signal() // 通知消费者有新数据
+	return n
+}
+
+// DequeueNoWait 阻塞单条读取
+// 如果无法获取锁，它会阻塞直到获取锁; 获取锁后，如果队列为空或已关闭，则返回 (zero, false); 否则，返回读取到的数据和 true
+func (that *LockedRingBuffer[T]) DequeueNoWait() (T, bool) {
+	that.mu.Lock()
+	defer that.mu.Unlock()
+
+	if that.buffer == nil || that.head == that.tail {
+		var zero T
+		return zero, false
+	}
+
+	item := that.buffer[that.head&that.mask]
+	that.head = (that.head + 1) & that.mask
+	that.condFull.Signal() // 通知生产者空间已释放
+	return item, true
+}
+
+// DequeueBatchNoWait 阻塞批量读取
+// 如果无法获取锁，它会阻塞直到获取锁; 获取锁后，如果队列为空或已关闭，则返回 nil, 0; 否则，返回读取到的数据切片和实际读取的数量
+//
+//   - 参数
+//
+//   - max: 最大读取数量
+//
+//   - 返回
+//
+//   - 读取到的数据
+//
+//   - 读取到的数量
+func (that *LockedRingBuffer[T]) DequeueBatchNoWait(max int) ([]T, int) {
+	if max <= 0 {
+		return nil, 0
+	}
+	that.mu.Lock()
+	defer that.mu.Unlock()
+
+	available := (that.tail - that.head) & that.mask
+	// 如果队列满, 则直接返回
+	if that.buffer == nil || available == 0 {
+		return nil, 0
+	}
+
+	if uint64(max) > available {
+		max = int(available)
+	}
+
+	// 始终分配新内存并拷贝
+	result := make([]T, max)
+	start := int(that.head & that.mask)
+
+	// 不跨边界
+	if start+max <= len(that.buffer) {
+		copy(result, that.buffer[start:start+max])
+	} else {
+		// 跨边界：需要 copy
+		n1 := len(that.buffer) - start
+		copy(result[0:n1], that.buffer[start:start+n1])
+		copy(result[n1:], that.buffer[0:max-n1])
+	}
+
+	that.head = (that.head + uint64(max)) & that.mask
+	that.condFull.Signal() // 通知生产者空间已释放
+	return result, max
+}
+
+// DequeueToNoWait 阻塞地将数据拷贝到调用方提供的 dst 切片中
+// 如果无法获取锁，它会阻塞直到获取锁; 获取锁后，如果队列为空或已关闭，则返回 0; 否则，返回实际拷贝到 dst 的元素数量
+func (that *LockedRingBuffer[T]) DequeueToNoWait(dst []T) int {
+	if len(dst) == 0 {
+		return 0
+	}
+
+	that.mu.Lock()
+	defer that.mu.Unlock()
+
+	available := (that.tail - that.head) & that.mask
+	// 如果队列满, 则直接返回
+	if that.buffer == nil || available == 0 {
+		return 0
+	}
+
+	// 实际能拷贝的数量不能超过 dst 的长度和可用数据量
+	n := len(dst)
+	if uint64(n) > available {
+		n = int(available)
+	}
+
+	start := int(that.head & that.mask)
+
+	// 优化：不跨边界时直接 copy，跨边界时分两段 copy
+	if start+n <= len(that.buffer) {
+		// 不跨边界：单次 copy
+		copy(dst, that.buffer[start:start+n])
+	} else {
+		// 跨边界：需要从尾部和头部两段拷贝
+		n1 := len(that.buffer) - start
+		copy(dst[0:n1], that.buffer[start:start+n1])
 		copy(dst[n1:], that.buffer[0:n-n1])
 	}
 
@@ -291,13 +463,14 @@ func (that *LockedRingBuffer[T]) Dequeue() (T, bool) {
 	that.mu.Lock()
 	defer that.mu.Unlock()
 
-	// 若队列为空
+	// 循环检查数据：只有当队列物理为空时，才可能进入等待或退出
 	for that.head == that.tail {
+		// 只有在【没数据】的前提下，发现【已关闭】，才真正返回结束信号
 		if that.closed || that.buffer == nil {
 			var zero T
 			return zero, false
 		}
-		that.condEmpty.Wait() // 等待生产者入队数据
+		that.condEmpty.Wait() // 没数据且没关闭，进入休眠，等待生产者唤醒
 	}
 
 	item := that.buffer[that.head&that.mask]
@@ -326,7 +499,7 @@ func (that *LockedRingBuffer[T]) DequeueBatch(max int) ([]T, int) {
 	defer that.mu.Unlock()
 
 	for {
-		if that.closed || that.buffer == nil {
+		if that.buffer == nil {
 			return nil, 0
 		}
 
@@ -338,7 +511,7 @@ func (that *LockedRingBuffer[T]) DequeueBatch(max int) ([]T, int) {
 			return that.dequeueBatchInternal(max)
 		}
 
-		if that.closed {
+		if that.closed || that.buffer == nil {
 			return nil, 0
 		}
 		that.condEmpty.Wait() // 等待数据
