@@ -2,6 +2,7 @@ package ksync
 
 import (
 	"sync"
+	"time"
 )
 
 // LockedRingBuffer 有锁版本的 SPSC Ring Buffer
@@ -33,8 +34,8 @@ func NewLockedRingBuffer[T any](size uint64) (*LockedRingBuffer[T], error) {
 
 // ====================== 非阻塞接口 ======================
 
-// AsyncEnqueue 非阻塞单条写入
-func (that *LockedRingBuffer[T]) AsyncEnqueue(item T) bool {
+// TryEnqueue 非阻塞单条写入
+func (that *LockedRingBuffer[T]) TryEnqueue(item T) bool {
 	if !that.mu.TryLock() {
 		return false
 	}
@@ -52,8 +53,8 @@ func (that *LockedRingBuffer[T]) AsyncEnqueue(item T) bool {
 	return true
 }
 
-// AsyncEnqueueBatch 非阻塞批量写入
-func (that *LockedRingBuffer[T]) AsyncEnqueueBatch(items []T) int {
+// TryEnqueueBatch 非阻塞批量写入
+func (that *LockedRingBuffer[T]) TryEnqueueBatch(items []T) int {
 	if len(items) == 0 {
 		return 0
 	}
@@ -96,8 +97,8 @@ func (that *LockedRingBuffer[T]) AsyncEnqueueBatch(items []T) int {
 	return n
 }
 
-// AsyncDequeue 非阻塞单条读取
-func (that *LockedRingBuffer[T]) AsyncDequeue() (T, bool) {
+// TryDequeue 非阻塞单条读取
+func (that *LockedRingBuffer[T]) TryDequeue() (T, bool) {
 	if !that.mu.TryLock() {
 		var zero T
 		return zero, false
@@ -115,7 +116,7 @@ func (that *LockedRingBuffer[T]) AsyncDequeue() (T, bool) {
 	return item, true
 }
 
-// AsyncDequeueBatch 非阻塞批量读取
+// TryDequeueBatch 非阻塞批量读取
 //
 //   - 参数
 //
@@ -126,7 +127,7 @@ func (that *LockedRingBuffer[T]) AsyncDequeue() (T, bool) {
 //   - 读取到的数据
 //
 //   - 读取到的数量
-func (that *LockedRingBuffer[T]) AsyncDequeueBatch(max int) ([]T, int) {
+func (that *LockedRingBuffer[T]) TryDequeueBatch(max int) ([]T, int) {
 	if max <= 0 {
 		return nil, 0
 	}
@@ -164,10 +165,10 @@ func (that *LockedRingBuffer[T]) AsyncDequeueBatch(max int) ([]T, int) {
 	return result, max
 }
 
-// AsyncDequeueTo 非阻塞地将数据拷贝到调用方提供的 dst 切片中
+// TryDequeueTo 非阻塞地将数据拷贝到调用方提供的 dst 切片中
 // 返回实际拷贝的元素数量（0 表示队列为空或 dst 长度为0）
 // 这是非阻塞版本，不会等待
-func (that *LockedRingBuffer[T]) AsyncDequeueTo(dst []T) int {
+func (that *LockedRingBuffer[T]) TryDequeueTo(dst []T) int {
 	if len(dst) == 0 {
 		return 0
 	}
@@ -383,9 +384,267 @@ func (that *LockedRingBuffer[T]) DequeueToNoWait(dst []T) int {
 	return n
 }
 
+// ================= 阻塞接口 WaitFor（正常 Cond 实现） ===================
+
+// EnqueueWait 阻塞写入单个元素，直到成功或超时
+func (that *LockedRingBuffer[T]) EnqueueWait(item T, timeout time.Duration) bool {
+	that.mu.Lock()
+	defer that.mu.Unlock()
+
+	if that.closed || that.buffer == nil {
+		return false
+	}
+
+	deadline := time.Now().Add(timeout) // 设置截止时间
+
+	// 即使消费者不消费，该协程也能确保生产者从 Wait 中醒来检查超时
+	t := time.AfterFunc(timeout, func() {
+		that.mu.Lock()
+		that.condFull.Broadcast()
+		that.mu.Unlock()
+	})
+
+	defer t.Stop() // 确保在函数退出时停止计时器，防止无意义的唤醒
+
+	for ((that.tail + 1) & that.mask) == that.head { // 队列已满时等待
+		if that.closed || that.buffer == nil { // 超时或已关闭则退出
+			return false
+		}
+
+		// 核心改动：检查当前是否已过截止时间
+		if time.Now().After(deadline) {
+			return false
+		}
+
+		that.condFull.Wait() // 等待空间释放
+	}
+
+	that.buffer[that.tail&that.mask] = item // 存入元素
+	that.tail = (that.tail + 1) & that.mask // 更新尾指针
+	that.condEmpty.Signal()                 // 通知消费者有新数据
+	return true
+}
+
+// EnqueueBatchWait 阻塞批量写入，直到全部写入或超时
+func (that *LockedRingBuffer[T]) EnqueueBatchWait(items []T, timeout time.Duration) int {
+	if len(items) == 0 {
+		return 0
+	}
+
+	that.mu.Lock()
+	defer that.mu.Unlock()
+
+	if that.closed || that.buffer == nil {
+		return 0
+	}
+
+	deadline := time.Now().Add(timeout) // 设置截止时间
+
+	// 即使消费者不消费，该协程也能确保生产者从 Wait 中醒来检查超时
+	t := time.AfterFunc(timeout, func() {
+		that.mu.Lock()
+		that.condFull.Broadcast()
+		that.mu.Unlock()
+	})
+
+	defer t.Stop() // 确保在函数退出时停止计时器，防止无意义的唤醒
+
+	written := 0
+	for written < len(items) {
+		// 队列关闭或超时, 直接退出, 否则等待
+		if that.closed || that.buffer == nil {
+			return written
+		}
+
+		// 每次循环（包括被唤醒后）先检查时间
+		if time.Now().After(deadline) {
+			return written // 超时，返回已写入的部分
+		}
+
+		available := (that.head - that.tail - 1) & that.mask
+
+		if available > 0 {
+			canWrite := int(available)
+			remain := len(items) - written
+			if canWrite > remain {
+				canWrite = remain
+			}
+
+			start := int(that.tail & that.mask)
+
+			// 使用 copy 替代循环赋值
+			if start+canWrite <= len(that.buffer) {
+				copy(that.buffer[start:start+canWrite], items[written:written+canWrite])
+			} else {
+				n1 := len(that.buffer) - start
+				copy(that.buffer[start:], items[written:written+n1])
+				copy(that.buffer[0:], items[written+n1:written+canWrite])
+			}
+
+			that.tail = (that.tail + uint64(canWrite)) & that.mask
+			written += canWrite
+
+			that.condEmpty.Signal() // 缓冲区满了，赶紧通知消费者来读
+			continue
+		}
+		that.condFull.Wait() // 队列已满，需要等待消费者消费, spurious wakeup 会由外层 for 循环重新检查 available,
+	}
+
+	return written
+}
+
+// DequeueWait 阻塞读取单个元素，直到成功或超时
+func (that *LockedRingBuffer[T]) DequeueWait(timeout time.Duration) (T, bool) {
+	that.mu.Lock()
+	defer that.mu.Unlock()
+
+	deadline := time.Now().Add(timeout) // 设置截止时间
+
+	// 即使消费者不消费，该协程也能确保生产者从 Wait 中醒来检查超时
+	t := time.AfterFunc(timeout, func() {
+		that.mu.Lock()
+		that.condEmpty.Broadcast()
+		that.mu.Unlock()
+	})
+
+	defer t.Stop() // 确保在函数退出时停止计时器，防止无意义的唤醒
+
+	// 循环检查数据：只有当队列物理为空时，才可能进入等待或退出
+	for that.head == that.tail {
+		// 只有在【没数据】的前提下，发现【已关闭】，才真正返回结束信号
+		if that.closed || that.buffer == nil {
+			var zero T
+			return zero, false
+		}
+
+		// 检查当前是否已过截止时间
+		if time.Now().After(deadline) {
+			var zero T
+			return zero, false
+		}
+		that.condEmpty.Wait() // 没数据且没关闭，进入休眠，等待生产者唤醒
+	}
+
+	item := that.buffer[that.head&that.mask]
+	that.head = (that.head + 1) & that.mask
+	that.condFull.Signal() // 通知生产者空间已释放
+	return item, true
+}
+
+// DequeueBatchWait 从环形缓冲区中批量取出元素
+//
+// 如果缓冲区中没有数据，会阻塞等待直到有数据可用、超时或缓冲区关闭。
+// 最多读取 max 个元素，实际读取数量取决于缓冲区当前可用元素数量。
+//
+// 参数:
+//   - max: 最大读取数量，必须大于0
+//
+// 返回:
+//   - []T: 取出的元素数组
+//   - int: 实际取出的元素数量
+func (that *LockedRingBuffer[T]) DequeueBatchWait(max int, timeout time.Duration) ([]T, int) {
+	if max <= 0 {
+		return nil, 0
+	}
+
+	that.mu.Lock()
+	defer that.mu.Unlock()
+
+	deadline := time.Now().Add(timeout) // 设置截止时间
+
+	// 即使消费者不消费，该协程也能确保生产者从 Wait 中醒来检查超时
+	t := time.AfterFunc(timeout, func() {
+		that.mu.Lock()
+		that.condEmpty.Broadcast()
+		that.mu.Unlock()
+	})
+
+	defer t.Stop() // 确保在函数退出时停止计时器，防止无意义的唤醒
+
+	for {
+		if that.buffer == nil {
+			return nil, 0
+		}
+
+		available := (that.tail - that.head) & that.mask // 计算可用元素数
+		if available > 0 {
+			if uint64(max) > available {
+				max = int(available) // 调整读取数量不超过可用数
+			}
+			return that.dequeueBatchInternal(max)
+		}
+
+		if that.closed || that.buffer == nil {
+			return nil, 0
+		}
+
+		if time.Now().After(deadline) {
+			return nil, 0
+		}
+
+		that.condEmpty.Wait() // 等待数据
+	}
+}
+
+// 阻塞 DequeueToWait, 将数据读取到 dst 中, 返回实际读取到的元素数量.
+// 若缓冲区为空, 则继续阻塞直到数据可用、超时或缓冲区关闭.
+// 若dst容量大于Buffer容量, 则一次性读取完Buffer中所有数据.
+// 若dst容量小于等于Buffer容量, 则最多读取dst长度个元素.
+func (that *LockedRingBuffer[T]) DequeueToWait(dst []T, timeout time.Duration) int {
+	if len(dst) == 0 {
+		return 0
+	}
+
+	that.mu.Lock()
+	defer that.mu.Unlock()
+
+	deadline := time.Now().Add(timeout) // 设置截止时间
+
+	// 即使消费者不消费，该协程也能确保生产者从 Wait 中醒来检查超时
+	t := time.AfterFunc(timeout, func() {
+		that.mu.Lock()
+		that.condEmpty.Broadcast()
+		that.mu.Unlock()
+	})
+
+	defer t.Stop() // 确保在函数退出时停止计时器，防止无意义的唤醒
+
+	for {
+		available := (that.tail - that.head) & that.mask
+		if available > 0 {
+			n := len(dst)
+			if uint64(n) > available {
+				n = int(available)
+			}
+
+			start := int(that.head & that.mask)
+			if start+n <= len(that.buffer) {
+				copy(dst, that.buffer[start:start+n])
+			} else {
+				n1 := len(that.buffer) - start
+				copy(dst, that.buffer[start:])
+				copy(dst[n1:], that.buffer[0:n-n1])
+			}
+			that.head = (that.head + uint64(n)) & that.mask
+			that.condFull.Signal()
+			return n
+		}
+
+		if that.closed || that.buffer == nil {
+			return 0
+		}
+
+		if time.Now().After(deadline) {
+			return 0
+		}
+
+		that.condEmpty.Wait()
+	}
+}
+
 // ====================== 阻塞接口（正常 Cond 实现） ======================
 
-// Enqueue 阻塞写入单个元素，直到成功或超时
+// Enqueue 阻塞写入单个元素，直到成功
 func (that *LockedRingBuffer[T]) Enqueue(item T) bool {
 	that.mu.Lock()
 	defer that.mu.Unlock()
@@ -407,7 +666,7 @@ func (that *LockedRingBuffer[T]) Enqueue(item T) bool {
 	return true
 }
 
-// EnqueueBatch 阻塞批量写入，直到全部写入或超时
+// EnqueueBatch 阻塞批量写入，直到全部写入
 func (that *LockedRingBuffer[T]) EnqueueBatch(items []T) int {
 	if len(items) == 0 {
 		return 0

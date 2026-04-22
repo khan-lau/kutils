@@ -92,7 +92,7 @@ func TestThroughput_LockedRingBuffer_Safe(t *testing.T) {
 		for !stopProducer.Load() {
 			// 防御点：在高频测试中，不要只试一次。
 			// 如果 TryLock 失败或队列满，应持续重试直到 stop 信号转真
-			for !rb.AsyncEnqueue(1) {
+			for !rb.TryEnqueue(1) {
 				if stopProducer.Load() {
 					return
 				}
@@ -108,7 +108,7 @@ func TestThroughput_LockedRingBuffer_Safe(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for {
-			if _, ok := rb.AsyncDequeue(); ok {
+			if _, ok := rb.TryDequeue(); ok {
 				consumed.Add(1)
 			} else {
 				// 防御点：只有当生产者停了，且队列确实空了，才能退出
@@ -247,7 +247,7 @@ func TestThroughput_MPSC_LockedRingBuffer(t *testing.T) {
 	for p := 0; p < producers; p++ {
 		go func() {
 			for !stop.Load() {
-				if rb.AsyncEnqueue(1) {
+				if rb.TryEnqueue(1) {
 					produced.Add(1)
 				}
 			}
@@ -257,7 +257,7 @@ func TestThroughput_MPSC_LockedRingBuffer(t *testing.T) {
 	// 单消费者
 	go func() {
 		for !stop.Load() {
-			if _, ok := rb.AsyncDequeue(); ok {
+			if _, ok := rb.TryDequeue(); ok {
 				consumed.Add(1)
 			}
 		}
@@ -420,7 +420,7 @@ func TestThroughput_Batch_LockedRingBuffer(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for !stopProducer.Load() {
-			n := rb.AsyncEnqueueBatch(items)
+			n := rb.TryEnqueueBatch(items)
 			if n > 0 {
 				produced.Add(int64(n))
 			}
@@ -435,7 +435,7 @@ func TestThroughput_Batch_LockedRingBuffer(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for {
-			_, n := rb.AsyncDequeueBatch(batchSize)
+			_, n := rb.TryDequeueBatch(batchSize)
 			if n > 0 {
 				consumed.Add(int64(n))
 			} else {
@@ -647,7 +647,7 @@ func testBatchThroughputLockedRingBuffer(t *testing.T, batchSize int) {
 	go func() {
 		defer wg.Done()
 		for !stopProducer.Load() {
-			n := rb.AsyncEnqueueBatch(items)
+			n := rb.TryEnqueueBatch(items)
 			if n > 0 {
 				produced.Add(int64(n))
 			}
@@ -661,7 +661,7 @@ func testBatchThroughputLockedRingBuffer(t *testing.T, batchSize int) {
 	go func() {
 		defer wg.Done()
 		for {
-			_, n := rb.AsyncDequeueBatch(batchSize)
+			_, n := rb.TryDequeueBatch(batchSize)
 			if n > 0 {
 				consumed.Add(int64(n))
 			} else {
@@ -848,7 +848,7 @@ func TestThroughput_Batch_DequeueTo_LockedRingBuffer(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for !stopProducer.Load() {
-			n := rb.AsyncEnqueueBatch(items)
+			n := rb.TryEnqueueBatch(items)
 			if n > 0 {
 				produced.Add(int64(n))
 			}
@@ -863,7 +863,7 @@ func TestThroughput_Batch_DequeueTo_LockedRingBuffer(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for {
-			n := rb.AsyncDequeueTo(dst)
+			n := rb.TryDequeueTo(dst)
 			if n > 0 {
 				consumed.Add(int64(n))
 			} else {
@@ -998,7 +998,7 @@ func testDequeueToThroughputLockedRingBuffer(t *testing.T, batchSize int) {
 	go func() {
 		defer wg.Done()
 		for !stopProducer.Load() {
-			n := rb.AsyncEnqueueBatch(items)
+			n := rb.TryEnqueueBatch(items)
 			if n > 0 {
 				produced.Add(int64(n))
 			}
@@ -1012,7 +1012,7 @@ func testDequeueToThroughputLockedRingBuffer(t *testing.T, batchSize int) {
 	go func() {
 		defer wg.Done()
 		for {
-			n := rb.AsyncDequeueTo(dst)
+			n := rb.TryDequeueTo(dst)
 			if n > 0 {
 				consumed.Add(int64(n))
 			} else {
