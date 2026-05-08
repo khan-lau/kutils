@@ -31,13 +31,15 @@ package klogger
 // `
 
 type LoggerConfigure struct {
-	Level        Level  `json:"logLevel"`     // 日志等级
-	Colorful     bool   `json:"colorful"`     // 是否需要彩色
-	Async        bool   `json:"async"`        // 是否异步输出日志, 默认同步输出
-	MaxAge       int    `json:"maxAge"`       // 日志最长保留时间, 单位 小时
-	RotationTime int    `json:"rotationTime"` // 日志滚动周期, 单位 小时, 24小时滚动一个文件
-	ToConsole    bool   `json:"console"`      // 是否输出到控制台
-	LogFile      string `json:"logFile"`      // 输出到文件, 如果文件名为空, 则不输出到文件
+	Level         Level  `json:"logLevel"`      // 日志等级
+	Colorful      bool   `json:"colorful"`      // 是否需要彩色
+	Async         bool   `json:"async"`         // 是否异步输出日志, 默认同步输出
+	flushInterval int64  `json:"flushInterval"` // 强制刷盘周期, 单位 毫秒
+	bufferSize    int64  `json:"bufferSize"`    // 缓冲区大小, 单位 Byte
+	MaxAge        int    `json:"maxAge"`        // 日志最长保留时间, 单位 小时
+	RotationTime  int    `json:"rotationTime"`  // 日志滚动周期, 单位 小时, 24小时滚动一个文件
+	ToConsole     bool   `json:"console"`       // 是否输出到控制台
+	LogFile       string `json:"logFile"`       // 输出到文件, 如果文件名为空, 则不输出到文件
 }
 
 func NewConfigure() *LoggerConfigure {
@@ -62,8 +64,10 @@ func (that *LoggerConfigure) IsColorful(need bool) *LoggerConfigure {
 	return that
 }
 
-func (that *LoggerConfigure) SetAsync(async bool) *LoggerConfigure {
+func (that *LoggerConfigure) SetAsync(async bool, flushInterval, bufferSize int64) *LoggerConfigure {
 	that.Async = async
+	that.flushInterval = flushInterval
+	that.bufferSize = bufferSize
 	return that
 }
 
@@ -85,4 +89,12 @@ func (that *LoggerConfigure) ShowConsole(flag bool) *LoggerConfigure {
 func (that *LoggerConfigure) SetLogFile(file string) *LoggerConfigure {
 	that.LogFile = file
 	return that
+}
+
+func (that *LoggerConfigure) FlushInterval() int64 {
+	return that.flushInterval
+}
+
+func (that *LoggerConfigure) BufferSize() int64 {
+	return that.bufferSize
 }

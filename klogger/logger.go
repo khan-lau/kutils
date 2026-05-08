@@ -74,7 +74,12 @@ func LoggerInstanceOnlyConsole(logLevel int8) *Logger {
 }
 
 func LoggerInstance(filename string, logLevel int8, needConsole bool, async bool, needTerminalColor bool) *Logger {
-	conf := NewConfigure().SetLogFile(filename).SetLevel(Level(logLevel)).ShowConsole(needConsole).SetAsync(async).IsColorful(needTerminalColor)
+	conf := NewConfigure().SetLogFile(filename).SetLevel(Level(logLevel)).ShowConsole(needConsole).SetAsync(async, 1000, 4*1024*1024).IsColorful(needTerminalColor)
+	return GetLoggerWithConfig(conf)
+}
+
+func AsyncLoggerInstance(filename string, logLevel int8, needConsole bool, async bool, flushInterval, bufferSize int64, needTerminalColor bool) *Logger {
+	conf := NewConfigure().SetLogFile(filename).SetLevel(Level(logLevel)).ShowConsole(needConsole).SetAsync(async, flushInterval, bufferSize).IsColorful(needTerminalColor)
 	return GetLoggerWithConfig(conf)
 }
 
@@ -142,8 +147,9 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 		// 2. 使用官方推荐的 BufferedWriteSyncer 实现异步批量写入
 		bufferedWriter := &zapcore.BufferedWriteSyncer{
 			WS:            multiSyncer,
-			Size:          4 * 1024 * 1024, // 4M 缓冲区
-			FlushInterval: 1 * time.Second, // 每秒强制刷盘
+			Size:          int(conf.BufferSize()),                                 // 缓冲区大小, 默认4M
+			FlushInterval: time.Duration(conf.FlushInterval()) * time.Millisecond, // 强制刷盘周期, 默认1000ms
+
 		}
 
 		core = zapcore.NewCore(encoder, //NewJSONEncoder
