@@ -54,7 +54,7 @@ func NewKRedis(ctx *kcontext.ContextNode, host string, port int, user string, pa
 }
 
 // 执行指令
-func (mr *KRedis) Do(args ...interface{}) (interface{}, error) {
+func (mr *KRedis) Do(args ...any) (any, error) {
 	val, err := mr.Client.Do(mr.ctx.Context(), args...).Result()
 	if err == redisHd.Nil {
 		return nil, nil
@@ -65,7 +65,7 @@ func (mr *KRedis) Do(args ...interface{}) (interface{}, error) {
 }
 
 // 获取一个key的值
-func (mr *KRedis) Get(key string) (interface{}, error) {
+func (mr *KRedis) Get(key string) (any, error) {
 	val, err := mr.Client.Do(mr.ctx.Context(), "GET", key).Result()
 	if err == redisHd.Nil {
 		return nil, nil
@@ -76,7 +76,7 @@ func (mr *KRedis) Get(key string) (interface{}, error) {
 }
 
 // 设置某个key的值, 并指定ttl
-func (mr *KRedis) Set(key string, value interface{}, duration time.Duration) (bool, error) {
+func (mr *KRedis) Set(key string, value any, duration time.Duration) (bool, error) {
 	err := mr.Client.Set(mr.ctx.Context(), key, value, duration).Err()
 	if err != nil {
 		return false, err
@@ -96,7 +96,7 @@ func (mr *KRedis) Exist(key string) (bool, error) {
 }
 
 // 获取一个key的hash字段的值
-func (that *KRedis) HGet(key string, field string) (interface{}, error) {
+func (that *KRedis) HGet(key string, field string) (any, error) {
 	val, err := that.Client.HGet(that.ctx.Context(), key, field).Result()
 	if err == redisHd.Nil {
 		return nil, nil
@@ -107,7 +107,7 @@ func (that *KRedis) HGet(key string, field string) (interface{}, error) {
 }
 
 // 设置一个key的hash字段的值
-func (that *KRedis) HSet(key string, field string, value interface{}) error {
+func (that *KRedis) HSet(key string, field string, value any) error {
 	err := that.Client.HSet(that.ctx.Context(), key, field, value).Err()
 	if err != nil {
 		return err
@@ -127,7 +127,7 @@ func (that *KRedis) HGetAll(key string) (map[string]string, error) {
 }
 
 // 设置一个key的hash字段的值列表
-func (that *KRedis) HSetAll(key string, fields map[string]interface{}) error {
+func (that *KRedis) HSetAll(key string, fields map[string]any) error {
 	err := that.Client.HSet(that.ctx.Context(), key, fields).Err()
 	if err != nil {
 		return err
@@ -172,7 +172,7 @@ func (that *KRedis) HVals(ctx context.Context, key string) ([]string, error) {
 }
 
 // 设置一个key的hash字段的值列表, 如果不存在则创建
-func (that *KRedis) HSetNX(ctx context.Context, key, field string, value interface{}) (bool, error) {
+func (that *KRedis) HSetNX(ctx context.Context, key, field string, value any) (bool, error) {
 	isExists, err := that.Client.HSetNX(ctx, key, field, value).Result()
 	if nil != err {
 		return false, err
@@ -190,7 +190,7 @@ func (that *KRedis) HDel(key string, fields ...string) error {
 }
 
 // 获取一个key的hash字段的值列表
-func (that *KRedis) HMGet(key string, fields ...string) ([]interface{}, error) {
+func (that *KRedis) HMGet(key string, fields ...string) ([]any, error) {
 	valMap, err := that.Client.HMGet(that.ctx.Context(), key, fields...).Result()
 	if err == redisHd.Nil {
 		return nil, nil
@@ -201,7 +201,7 @@ func (that *KRedis) HMGet(key string, fields ...string) ([]interface{}, error) {
 }
 
 // 设置一个key的hash字段的值列表, 如果不存在则创建
-func (that *KRedis) HMSet(key string, fields map[string]interface{}) error {
+func (that *KRedis) HMSet(key string, fields map[string]any) error {
 	err := that.Client.HMSet(that.ctx.Context(), key, fields).Err()
 	if nil != err {
 		return err
@@ -210,22 +210,22 @@ func (that *KRedis) HMSet(key string, fields map[string]interface{}) error {
 }
 
 // 从列表左边插入数据
-func (that *KRedis) LPush(key string, values ...interface{}) (int64, error) {
+func (that *KRedis) LPush(key string, values ...any) (int64, error) {
 	return that.Client.LPush(that.ctx.Context(), key, values...).Result()
 }
 
 // 从列表左边插入数据, 如果不存在则不插入数据
-func (that *KRedis) LPushX(key string, values ...interface{}) (int64, error) {
+func (that *KRedis) LPushX(key string, values ...any) (int64, error) {
 	return that.Client.LPushX(that.ctx.Context(), key, values...).Result()
 }
 
 // 从列表右边插入数据
-func (that *KRedis) RPush(key string, values ...interface{}) (int64, error) {
+func (that *KRedis) RPush(key string, values ...any) (int64, error) {
 	return that.Client.RPush(that.ctx.Context(), key, values...).Result()
 }
 
 // 从列表右边插入数据, 如果不存在则不插入数据
-func (that *KRedis) RPushX(key string, values ...interface{}) (int64, error) {
+func (that *KRedis) RPushX(key string, values ...any) (int64, error) {
 	return that.Client.RPushX(that.ctx.Context(), key, values...).Result()
 }
 
@@ -253,12 +253,12 @@ func (that *KRedis) LTrim(key string, start int64, stop int64) error {
 	return that.Client.LTrim(that.ctx.Context(), key, start, stop).Err()
 }
 
-func (that *KRedis) LSet(key string, index int64, value interface{}) error {
+func (that *KRedis) LSet(key string, index int64, value any) error {
 	return that.Client.LSet(that.ctx.Context(), key, index, value).Err()
 }
 
 // 删除列表中的数据
-func (that *KRedis) LRem(key string, count int64, value interface{}) (int64, error) {
+func (that *KRedis) LRem(key string, count int64, value any) (int64, error) {
 	return that.Client.LRem(that.ctx.Context(), key, count, value).Result()
 }
 
@@ -268,11 +268,11 @@ func (that *KRedis) LIndex(key string, index int64) (string, error) {
 }
 
 // 在指定位置插入数据，在头部插入用"before"，尾部插入用"after"
-func (that *KRedis) LInsert(key string, position string, pivot interface{}, value interface{}) (int64, error) {
+func (that *KRedis) LInsert(key string, position string, pivot any, value any) (int64, error) {
 	return that.Client.LInsert(that.ctx.Context(), key, position, pivot, value).Result()
 }
 
-func (that *KRedis) SAdd(key string, members ...interface{}) (int64, error) {
+func (that *KRedis) SAdd(key string, members ...any) (int64, error) {
 	return that.Client.SAdd(that.ctx.Context(), key, members...).Result()
 }
 
@@ -280,11 +280,11 @@ func (that *KRedis) SMembers(key string) ([]string, error) {
 	return that.Client.SMembers(that.ctx.Context(), key).Result()
 }
 
-func (that *KRedis) SRem(key string, members ...interface{}) (int64, error) {
+func (that *KRedis) SRem(key string, members ...any) (int64, error) {
 	return that.Client.SRem(that.ctx.Context(), key, members...).Result()
 }
 
-func (that *KRedis) SIsMember(key string, member interface{}) (bool, error) {
+func (that *KRedis) SIsMember(key string, member any) (bool, error) {
 	return that.Client.SIsMember(that.ctx.Context(), key, member).Result()
 }
 
@@ -324,7 +324,7 @@ func (that *KRedis) SDiffStore(destKey string, keys ...string) (int64, error) {
 	return that.Client.SDiffStore(that.ctx.Context(), destKey, keys...).Result()
 }
 
-func (that *KRedis) SMove(source, destination string, member interface{}) (bool, error) {
+func (that *KRedis) SMove(source, destination string, member any) (bool, error) {
 	return that.Client.SMove(that.ctx.Context(), source, destination, member).Result()
 }
 
@@ -365,7 +365,7 @@ func (that *KRedis) ExpireAt(key string, tm time.Time) bool {
 // paths: 可选的 JSON Path 参数。如果没有提供，则获取整个 JSON 文档。
 // 返回值：JSON 字符串。如果键或路径不存在，或结果为空，则返回空字符串和 nil 错误。
 func (that *KRedis) JsonGet(key string, paths ...string) (string, error) {
-	args := make([]interface{}, 0, 2+len(paths))
+	args := make([]any, 0, 2+len(paths))
 	args = append(args, "JSON.GET", key)
 	for _, path := range paths {
 		args = append(args, path)
@@ -431,7 +431,7 @@ func (that *KRedis) JsonMerge(key string, path string, value string) error {
 // 返回值：被删除的 JSON 值数量。如果键或路径不存在，通常返回 0。
 func (that *KRedis) JsonDel(key string, path string) (int64, error) {
 	// 构建 Redis 命令参数
-	args := make([]interface{}, 0, 3)
+	args := make([]any, 0, 3)
 	args = append(args, "JSON.DEL", key)
 	if path != "" { // 如果 path 不为空，则添加到参数中
 		args = append(args, path)
@@ -459,7 +459,7 @@ func (that *KRedis) JsonDel(key string, path string) (int64, error) {
 // path: 可选的 JSON Path。如果为空字符串，则返回根路径的类型; 不支持同时指定多个路径。
 // 返回值：一个包含 JSON 值类型的字符串切片。如果键或路径不存在，则返回 nil 切片和 nil 错误。
 func (that *KRedis) JsonType(key string, path string) ([]string, error) {
-	args := make([]interface{}, 0, 3)
+	args := make([]any, 0, 3)
 	args = append(args, "JSON.TYPE", key)
 	if path != "" { // 如果 path 不为空，则添加到参数中
 		args = append(args, path)
@@ -491,8 +491,8 @@ func (that *KRedis) JsonType(key string, path string) ([]string, error) {
 			stringTypes = append(stringTypes, string(val)) // 将字节切片转换为字符串后追加到切片中
 		case []string:
 			stringTypes = append(stringTypes, val...) // 直接将每个元素追加到结果切片中
-		case []interface{}:
-			for _, iv := range val { // 遍历 []interface{} 中的每个元素
+		case []any:
+			for _, iv := range val { // 遍历 []any 中的每个元素
 				stringTypes = append(stringTypes, iv.(string)) // 断言为 string 并追加到结果切片中
 			}
 		case nil: // 如果 v 是 nil，则忽略它（通常不会发生）
@@ -510,7 +510,7 @@ func (that *KRedis) JsonType(key string, path string) ([]string, error) {
 // path: 可选的 JSON Path。如果为空字符串，则返回根对象的键。
 // 返回值：一个包含对象键的字符串切片。如果键、路径不存在或路径对应的不是对象，则返回 nil 切片和 nil 错误。
 func (that *KRedis) JsonObjKeys(key string, path string) ([]string, error) {
-	args := make([]interface{}, 0, 3)
+	args := make([]any, 0, 3)
 	args = append(args, "JSON.OBJKEYS", key)
 	if path != "" { // 如果 path 不为空，则添加到参数中
 		args = append(args, path)
@@ -552,7 +552,7 @@ func (that *KRedis) JsonObjKeys(key string, path string) ([]string, error) {
 // path: 可选的 JSON Path。如果为空字符串，则返回根对象的键。
 // 返回值：一个包含对象键的字符串切片。如果键、路径不存在或路径对应的不是对象，则返回 nil 切片和 nil 错误。
 func (that *KRedis) JsonObjLen(key string, path string) ([]int64, error) {
-	args := make([]interface{}, 0, 3)
+	args := make([]any, 0, 3)
 	args = append(args, "JSON.OBJLEN", key)
 	if path != "" { // 如果 path 不为空，则添加到参数中
 		args = append(args, path)
@@ -572,7 +572,7 @@ func (that *KRedis) JsonObjLen(key string, path string) ([]int64, error) {
 	switch retVal := result.(type) { // 使用类型断言和 switch 语句来处理不同类型的值
 	case int64:
 		return []int64{retVal}, nil
-	case []interface{}:
+	case []any:
 		array := retVal
 		lenArray := make([]int64, 0, len(array))
 		for _, v := range array {
@@ -760,12 +760,12 @@ func (mr *KRedis) Scan(limit int, aboutTypes []string, ignoreKeys []string, incl
 }
 
 // 向指定topic发布消息
-func (mr *KRedis) Publish(topic string, payload interface{}) error {
+func (mr *KRedis) Publish(topic string, payload any) error {
 	return mr.Client.Publish(mr.ctx.Context(), topic, payload).Err()
 }
 
 // 从指定topic订阅消息, 底层API, 最好使用Subscribe替代
-func (mr *KRedis) SyncSubscribeLow(callback func(err error, topic string, payload interface{}), topics ...string) {
+func (mr *KRedis) SyncSubscribeLow(callback func(err error, topic string, payload any), topics ...string) {
 	go func() {
 		pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
 		defer pubsub.Close()
@@ -788,7 +788,7 @@ func (mr *KRedis) SyncSubscribeLow(callback func(err error, topic string, payloa
 }
 
 // 从指定topic订阅消息, 底层API, 最好使用Subscribe替代
-func (mr *KRedis) SubscribeLow(callback func(err error, topic string, payload interface{}), topics ...string) {
+func (mr *KRedis) SubscribeLow(callback func(err error, topic string, payload any), topics ...string) {
 	go func() {
 		pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
 		defer pubsub.Close()
@@ -811,7 +811,7 @@ func (mr *KRedis) SubscribeLow(callback func(err error, topic string, payload in
 }
 
 // 从指定topic订阅消息, 底层API, 最好使用Subscribe替代
-func (mr *KRedis) SyncPSubscribeLow(callback func(err error, topic string, payload interface{}), topics ...string) {
+func (mr *KRedis) SyncPSubscribeLow(callback func(err error, topic string, payload any), topics ...string) {
 	pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
 	defer pubsub.Close()
 
@@ -832,7 +832,7 @@ forEnd: //这个标签
 }
 
 // 从指定topic订阅消息, 底层API, 最好使用Subscribe替代
-func (mr *KRedis) PSubscribeLow(callback func(err error, topic string, payload interface{}), topics ...string) {
+func (mr *KRedis) PSubscribeLow(callback func(err error, topic string, payload any), topics ...string) {
 	go func() {
 		pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
 		defer pubsub.Close()
@@ -855,7 +855,7 @@ func (mr *KRedis) PSubscribeLow(callback func(err error, topic string, payload i
 }
 
 // 从指定topic订阅消息
-func (mr *KRedis) SyncSubscribeWithoutTimeout(callback func(err error, topic string, payload interface{}), topics ...string) {
+func (mr *KRedis) SyncSubscribeWithoutTimeout(callback func(err error, topic string, payload any), topics ...string) {
 	pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
 	ch := pubsub.Channel(redisHd.WithChannelSize(100), redisHd.WithChannelHealthCheckInterval(time.Second*30))
 forEnd: //这个标签
@@ -884,7 +884,7 @@ END:
 }
 
 // 从指定topic订阅消息
-func (mr *KRedis) SubscribeWithoutTimeout(callback func(err error, topic string, payload interface{}), topics ...string) {
+func (mr *KRedis) SubscribeWithoutTimeout(callback func(err error, topic string, payload any), topics ...string) {
 	go func() {
 		pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
 		ch := pubsub.Channel(redisHd.WithChannelSize(100), redisHd.WithChannelHealthCheckInterval(time.Second*30))
@@ -915,7 +915,7 @@ func (mr *KRedis) SubscribeWithoutTimeout(callback func(err error, topic string,
 }
 
 // 从指定topic订阅消息, timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
-func (mr *KRedis) SyncSubscribe(timeout int, callback func(err error, topic string, payload interface{}), topics ...string) {
+func (mr *KRedis) SyncSubscribe(timeout int, callback func(err error, topic string, payload any), topics ...string) {
 	pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
 	// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
 	ch := pubsub.Channel(redisHd.WithChannelSize(100), redisHd.WithChannelHealthCheckInterval(time.Second*30))
@@ -947,7 +947,7 @@ END:
 }
 
 // 从指定topic订阅消息, timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
-func (mr *KRedis) Subscribe(timeout int, callback func(err error, topic string, payload interface{}), topics ...string) {
+func (mr *KRedis) Subscribe(timeout int, callback func(err error, topic string, payload any), topics ...string) {
 	go func() {
 		pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
 		// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
@@ -981,7 +981,7 @@ func (mr *KRedis) Subscribe(timeout int, callback func(err error, topic string, 
 }
 
 // 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; chanSize 最大允许队列大小, 如果< 1, 则为1; callback为接收消息的回调函数; topics为需要订阅的topic
-func (mr *KRedis) SyncPSubscribeWithChanSize(timeout int, chanSize int, callback func(err error, topic string, payload interface{}), topics ...string) {
+func (mr *KRedis) SyncPSubscribeWithChanSize(timeout int, chanSize int, callback func(err error, topic string, payload any), topics ...string) {
 	pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
 	// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
 	if chanSize < 1 {
@@ -1016,7 +1016,7 @@ END:
 }
 
 // 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; chanSize 最大允许队列大小, 如果< 1, 则为1; callback为接收消息的回调函数; topics为需要订阅的topic
-func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback func(err error, topic string, payload interface{}), topics ...string) {
+func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback func(err error, topic string, payload any), topics ...string) {
 	go func() {
 		pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
 		// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
@@ -1053,7 +1053,7 @@ func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback fun
 }
 
 // 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
-func (mr *KRedis) SyncPSubscribe(timeout int, callback func(err error, topic string, payload interface{}), topics ...string) {
+func (mr *KRedis) SyncPSubscribe(timeout int, callback func(err error, topic string, payload any), topics ...string) {
 	pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
 	// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
 	ch := pubsub.Channel(redisHd.WithChannelSize(100), redisHd.WithChannelHealthCheckInterval(time.Second*30))
@@ -1086,7 +1086,7 @@ END:
 }
 
 // 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
-func (mr *KRedis) PSubscribe(timeout int, callback func(err error, topic string, payload interface{}), topics ...string) {
+func (mr *KRedis) PSubscribe(timeout int, callback func(err error, topic string, payload any), topics ...string) {
 	go func() {
 		pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
 		// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅

@@ -34,7 +34,7 @@ func (u UUID) Value() (driver.Value, error) {
 // Scan implements the sql.Scanner interface.
 // A 16-byte slice is handled by UnmarshalBinary, while
 // a longer byte slice or a string is handled by UnmarshalText.
-func (u *UUID) Scan(src interface{}) error {
+func (u *UUID) Scan(src any) error {
 	switch src := src.(type) {
 	case []byte:
 		if len(src) == Size {
@@ -66,7 +66,7 @@ func (u NullUUID) Value() (driver.Value, error) {
 }
 
 // Scan implements the sql.Scanner interface.
-func (u *NullUUID) Scan(src interface{}) error {
+func (u *NullUUID) Scan(src any) error {
 	if src == nil {
 		u.UUID, u.Valid = Nil, false
 		return nil

@@ -8,14 +8,14 @@ import (
 
 type Pair struct {
 	key   string
-	value interface{}
+	value any
 }
 
 func (kv *Pair) Key() string {
 	return kv.key
 }
 
-func (kv *Pair) Value() interface{} {
+func (kv *Pair) Value() any {
 	return kv.value
 }
 
@@ -31,7 +31,7 @@ func (a ByPair) Less(i, j int) bool { return a.LessFunc(a.Pairs[i], a.Pairs[j]) 
 // @bref OrderedMap 定义有序的键值对。
 type OrderedMap struct {
 	keys       []string
-	values     map[string]interface{}
+	values     map[string]any
 	escapeHTML bool
 }
 
@@ -43,7 +43,7 @@ type OrderedMap struct {
 func NewOrderedMap() *OrderedMap {
 	o := OrderedMap{}
 	o.keys = []string{}
-	o.values = map[string]interface{}{}
+	o.values = map[string]any{}
 	o.escapeHTML = true
 	return &o
 }
@@ -65,9 +65,9 @@ func (o *OrderedMap) SetEscapeHTML(on bool) {
 //
 // 返回值:
 //
-//	@return interface{} 对应的值, 如果键不存在，则返回nil
+//	@return any 对应的值, 如果键不存在，则返回nil
 //	@return bool 如果键不存在，则返回false
-func (o *OrderedMap) Get(key string) (interface{}, bool) {
+func (o *OrderedMap) Get(key string) (any, bool) {
 	val, exists := o.values[key]
 	return val, exists
 }
@@ -79,8 +79,8 @@ func (o *OrderedMap) Get(key string) (interface{}, bool) {
 // 参数:
 //
 //	@param key string 键
-//	@param value interface{} 值
-func (o *OrderedMap) Set(key string, value interface{}) {
+//	@param value any 值
+func (o *OrderedMap) Set(key string, value any) {
 	_, exists := o.values[key]
 	if !exists {
 		o.keys = append(o.keys, key)
@@ -122,8 +122,8 @@ func (o *OrderedMap) Keys() []string {
 //
 // 返回值:
 //
-//	@return map[string]interface{} 所有值, 键值对以map的形式返回
-func (o *OrderedMap) Values() map[string]interface{} {
+//	@return map[string]any 所有值, 键值对以map的形式返回
+func (o *OrderedMap) Values() map[string]any {
 	return o.values
 }
 
@@ -161,7 +161,7 @@ func (o *OrderedMap) Sort(lessFunc func(a *Pair, b *Pair) bool) {
 //	@param b []byte JSON字符串
 func (o *OrderedMap) UnmarshalJSON(b []byte) error {
 	if o.values == nil {
-		o.values = map[string]interface{}{}
+		o.values = map[string]any{}
 	}
 	err := json.Unmarshal(b, &o.values)
 	if err != nil {
@@ -207,7 +207,7 @@ func decodeOrderedMap(dec *json.Decoder, o *OrderedMap) error {
 		if delim, ok := token.(json.Delim); ok {
 			switch delim {
 			case '{':
-				if values, ok := o.values[key].(map[string]interface{}); ok {
+				if values, ok := o.values[key].(map[string]any); ok {
 					newMap := OrderedMap{
 						keys:       make([]string, 0, len(values)),
 						values:     values,
@@ -231,11 +231,11 @@ func decodeOrderedMap(dec *json.Decoder, o *OrderedMap) error {
 					return err
 				}
 			case '[':
-				if values, ok := o.values[key].([]interface{}); ok {
+				if values, ok := o.values[key].([]any); ok {
 					if err = decodeSlice(dec, values, o.escapeHTML); err != nil {
 						return err
 					}
-				} else if err = decodeSlice(dec, []interface{}{}, o.escapeHTML); err != nil {
+				} else if err = decodeSlice(dec, []any{}, o.escapeHTML); err != nil {
 					return err
 				}
 			}
@@ -243,7 +243,7 @@ func decodeOrderedMap(dec *json.Decoder, o *OrderedMap) error {
 	}
 }
 
-func decodeSlice(dec *json.Decoder, s []interface{}, escapeHTML bool) error {
+func decodeSlice(dec *json.Decoder, s []any, escapeHTML bool) error {
 	for index := 0; ; index++ {
 		token, err := dec.Token()
 		if err != nil {
@@ -253,7 +253,7 @@ func decodeSlice(dec *json.Decoder, s []interface{}, escapeHTML bool) error {
 			switch delim {
 			case '{':
 				if index < len(s) {
-					if values, ok := s[index].(map[string]interface{}); ok {
+					if values, ok := s[index].(map[string]any); ok {
 						newMap := OrderedMap{
 							keys:       make([]string, 0, len(values)),
 							values:     values,
@@ -281,14 +281,14 @@ func decodeSlice(dec *json.Decoder, s []interface{}, escapeHTML bool) error {
 				}
 			case '[':
 				if index < len(s) {
-					if values, ok := s[index].([]interface{}); ok {
+					if values, ok := s[index].([]any); ok {
 						if err = decodeSlice(dec, values, escapeHTML); err != nil {
 							return err
 						}
-					} else if err = decodeSlice(dec, []interface{}{}, escapeHTML); err != nil {
+					} else if err = decodeSlice(dec, []any{}, escapeHTML); err != nil {
 						return err
 					}
-				} else if err = decodeSlice(dec, []interface{}{}, escapeHTML); err != nil {
+				} else if err = decodeSlice(dec, []any{}, escapeHTML); err != nil {
 					return err
 				}
 			case ']':

@@ -25,10 +25,10 @@ func Test_ContextTree(t *testing.T) {
 	grandchild3 := child2.NewChild("子节点2->子节点3")                          // 重名子节点1
 
 	// 添加监听器
-	listenerID1 := child1.AddListener(func(source *kcontext.ContextNode, msg interface{}) {
+	listenerID1 := child1.AddListener(func(source *kcontext.ContextNode, msg any) {
 		kstrings.Debugf("---  {} 收到消息: `{}`, 来源: {}\n", child1.Name(), msg, source.Name())
 	})
-	listenerID2 := grandchild1.AddListener(func(source *kcontext.ContextNode, msg interface{}) {
+	listenerID2 := grandchild1.AddListener(func(source *kcontext.ContextNode, msg any) {
 		if ch, ok := source.Tag().(chan int); ok {
 			ch <- msg.(int)
 		}
@@ -41,7 +41,7 @@ func Test_ContextTree(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			node := child2.NewChild(kstrings.Sprintf("子任务%d", i))
-			node.AddListener(func(source *kcontext.ContextNode, msg interface{}) {
+			node.AddListener(func(source *kcontext.ContextNode, msg any) {
 				kstrings.Debugf("{} 收到消息: {}, 来源: {}\n", node.Name(), msg, source.Name())
 			})
 		}(i)

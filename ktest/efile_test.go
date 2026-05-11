@@ -389,7 +389,7 @@ func Test_ParseRootBytes(t *testing.T) {
 		return
 	}
 
-	//data := v.(map[string]interface{})
+	//data := v.(map[string]any)
 	jsonStr1, err := json.MarshalIndent(v, "", "  ")
 
 	if err != nil {

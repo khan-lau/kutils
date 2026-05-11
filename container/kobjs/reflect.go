@@ -59,7 +59,7 @@ func canExposeInterface() bool {
 }
 
 // 如果支持hack, 导出私有变量
-func exposeInterface(v reflect.Value) interface{} {
+func exposeInterface(v reflect.Value) any {
 	if canExposeInterface() {
 		pFlag := (*flag)(unsafe.Pointer(uintptr(unsafe.Pointer(&v)) + flagOffset))
 		*pFlag &= maskFlagRO
@@ -71,7 +71,7 @@ func exposeInterface(v reflect.Value) interface{} {
 
 // 将对象的成员变量与成员函数 通过beautiful json5的格式打印
 //   - @return string 格式化的json5字符串
-func ObjectToJson5(obj interface{}) string {
+func ObjectToJson5(obj any) string {
 	initUnsafe()
 
 	var sb strings.Builder
@@ -82,7 +82,7 @@ func ObjectToJson5(obj interface{}) string {
 
 // 将对象的成员变量与成员函数, 通过beautiful json5的格式打印, 不包含成员函数
 //   - @return string 格式化的json5字符串
-func ObjectToJson5WithoutFunc(obj interface{}) string {
+func ObjectToJson5WithoutFunc(obj any) string {
 	initUnsafe()
 
 	var sb strings.Builder
@@ -98,7 +98,7 @@ func ObjectToJson5WithoutFunc(obj interface{}) string {
 //   - @param bool             needExportFunc 是否需要导出成员函数
 //   - @param uint             level          对象深度
 //   - @param string           ident          格式化前导字符串, 通常为 "  " 或 "\t"
-func objectToJson5(key string, obj interface{}, sb *strings.Builder, needExportFunc bool, level uint, ident string) {
+func objectToJson5(key string, obj any, sb *strings.Builder, needExportFunc bool, level uint, ident string) {
 	val := mustBeValue(obj)
 	if len(key) > 0 {
 		sb.WriteString(fmt.Sprintf("\n%s%s:", strings.Repeat(ident, int(level)), key))
@@ -132,7 +132,7 @@ func objectToJson5(key string, obj interface{}, sb *strings.Builder, needExportF
 					strTmp := strings.Repeat(ident, int(level))
 					var args = []reflect.Value{val, reflect.ValueOf(strTmp)}
 					retv := met.Func.Call(args)
-					reti := retv[0].Interface() // interface{} 类型
+					reti := retv[0].Interface() // any 类型
 					ret, _ := reti.(string)
 
 					sb.WriteString(ret)
@@ -270,7 +270,7 @@ func objectToJson5(key string, obj interface{}, sb *strings.Builder, needExportF
 
 // 将对象的成员变量与成员函数 json5的格式打印
 //   - @return string json5字符串
-func ObjectDump(obj interface{}) string {
+func ObjectDump(obj any) string {
 	initUnsafe()
 
 	var sb strings.Builder
@@ -281,7 +281,7 @@ func ObjectDump(obj interface{}) string {
 
 // 将对象的成员变量与成员函数 json5的格式打印, 不包含成员函数
 //   - @return string json5字符串
-func ObjectDumpWithoutFunc(obj interface{}) string {
+func ObjectDumpWithoutFunc(obj any) string {
 	initUnsafe()
 
 	var sb strings.Builder
@@ -294,7 +294,7 @@ func ObjectDumpWithoutFunc(obj interface{}) string {
 //   - @param string           key   对象变量名称
 //   - @param any              obj   对象实例, 也可以是指针
 //   - @param *strings.Builder sb    字符串缓冲
-func objectDump(key string, obj interface{}, sb *strings.Builder, needExportFunc bool) {
+func objectDump(key string, obj any, sb *strings.Builder, needExportFunc bool) {
 	val := mustBeValue(obj)
 	if len(key) > 0 {
 		sb.WriteString(fmt.Sprintf("%s:", key))
@@ -325,7 +325,7 @@ func objectDump(key string, obj interface{}, sb *strings.Builder, needExportFunc
 				} else {
 					var args = []reflect.Value{val}
 					retv := met.Func.Call(args)
-					reti := retv[0].Interface() // interface{} 类型
+					reti := retv[0].Interface() // any 类型
 					ret, _ := reti.(string)
 					sb.WriteString(ret)
 				}
@@ -430,9 +430,9 @@ func objectDump(key string, obj interface{}, sb *strings.Builder, needExportFunc
 
 // 判断对象是否为指定类型
 //   - @temp_param T                类型
-//   - @param      interface{}  obj 变量
+//   - @param      any  obj 变量
 //   - @return bool 是否为指定类型
-func InstanceOf[T interface{}](obj interface{}) bool {
+func InstanceOf[T any](obj any) bool {
 	switch obj.(type) {
 	case T:
 		return true
@@ -476,7 +476,7 @@ func mustBeValue(obj any) reflect.Value {
 // 	case reflect.Ptr:
 // 		return val, val.Elem()
 // 	default:
-// 		var tmp interface{}
+// 		var tmp any
 // 		return reflect.ValueOf(&tmp), val
 // 	}
 // }

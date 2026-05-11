@@ -11,7 +11,7 @@ import (
 	"github.com/khan-lau/kutils/kuuid"
 )
 
-type MessageCallback func(source *ContextNode, msg interface{})
+type MessageCallback func(source *ContextNode, msg any)
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -58,7 +58,7 @@ func (that *ContextTree) GetRoot() *ContextNode {
 type ContextNode struct {
 	name       string                     // 节点名称，可重复
 	id         string                     // 唯一标识符，区分重名节点
-	tag        interface{}                // 节点标签，存储任意类型元数据
+	tag        any                        // 节点标签，存储任意类型元数据
 	ctx        context.Context            // 节点的context
 	cancel     context.CancelFunc         // 节点的取消函数
 	parent     *ContextNode               // 父节点引用
@@ -76,7 +76,7 @@ func (that *ContextNode) NewChild(name string) *ContextNode {
 
 // AddChild 为父节点添加子节点
 // 自动创建子context并维护父子关系，生成唯一ID，线程安全
-func (that *ContextNode) NewChildWithTag(name string, tag interface{}) *ContextNode {
+func (that *ContextNode) NewChildWithTag(name string, tag any) *ContextNode {
 	uuid, _ := kuuid.NewV1()
 	that.nodeMu.Lock()
 	defer that.nodeMu.Unlock()
@@ -129,7 +129,7 @@ func (that *ContextNode) RemoveListener(listenerID string) {
 }
 
 // Notify 异步通知所有监听器
-func (that *ContextNode) Notify(source *ContextNode, msg interface{}) {
+func (that *ContextNode) Notify(source *ContextNode, msg any) {
 	that.listenerMu.RLock()
 	listeners := make(map[string]MessageCallback, len(that.listeners))
 	for id, listener := range that.listeners {
@@ -172,7 +172,7 @@ func (that *ContextNode) ID() string {
 
 // SetTag 设置节点的tag值
 // 支持任意类型，线程安全
-func (that *ContextNode) SetTag(tag interface{}) {
+func (that *ContextNode) SetTag(tag any) {
 	that.nodeMu.Lock()
 	defer that.nodeMu.Unlock()
 	that.tag = tag
@@ -180,7 +180,7 @@ func (that *ContextNode) SetTag(tag interface{}) {
 
 // GetTag 获取节点的tag值
 // 返回nil如果未设置，线程安全
-func (that *ContextNode) Tag() interface{} {
+func (that *ContextNode) Tag() any {
 	that.nodeMu.RLock()
 	defer that.nodeMu.RUnlock()
 	return that.tag

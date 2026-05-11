@@ -7,10 +7,10 @@
 - LockedRingBuffer 有锁版本的 MPMC Ring Buffer, 容量必须是 2 的幂次方: 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536
 
 ## knumber
-interface{} 数字类型 to float32 float64 int int8 int16 int32 int64 uint uint8 uint16 uint32 uint64
+any 数字类型 to float32 float64 int int8 int16 int32 int64 uint uint8 uint16 uint32 uint64
 
 ```go
-anymap := make(map[string]interface{})
+anymap := make(map[string]amy)
 anymap["key0"] = 10
 
 if val0, ok := kunumber.ToInt32(anymap["key0"]); ok{ // 返回 int32

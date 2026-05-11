@@ -207,7 +207,7 @@ func Test_JsonObjLen(t *testing.T) {
 	}
 }
 
-func LogFunc(lvl klogger.Level, f string, args ...interface{}) {
+func LogFunc(lvl klogger.Level, f string, args ...any) {
 	if nil == klog {
 		klog = klogger.LoggerInstanceOnlyConsole(int8(klogger.DebugLevel))
 		klog.Warrn("Not init logger")

@@ -1,7 +1,7 @@
 package knumber
 
 // ToInt 将任意类型转换为int，转换失败返回0和false。
-func ToInt(val interface{}) (int, bool) {
+func ToInt(val any) (int, bool) {
 	if val == nil {
 		return 0, false
 	}
@@ -36,7 +36,7 @@ func ToInt(val interface{}) (int, bool) {
 }
 
 // ToInt8 将任意类型转换为int8，转换失败返回0和false。
-func ToInt8(val interface{}) (int8, bool) {
+func ToInt8(val any) (int8, bool) {
 	if val == nil {
 		return 0, false
 	}
@@ -71,7 +71,7 @@ func ToInt8(val interface{}) (int8, bool) {
 }
 
 // ToInt16 将任意类型转换为int16，转换失败返回0和false。
-func ToInt16(val interface{}) (int16, bool) {
+func ToInt16(val any) (int16, bool) {
 	if val == nil {
 		return 0, false
 	}
@@ -106,7 +106,7 @@ func ToInt16(val interface{}) (int16, bool) {
 }
 
 // ToInt32 将任意类型转换为int32，转换失败返回0和false。
-func ToInt32(val interface{}) (int32, bool) {
+func ToInt32(val any) (int32, bool) {
 	if val == nil {
 		return 0, false
 	}
@@ -141,7 +141,7 @@ func ToInt32(val interface{}) (int32, bool) {
 }
 
 // ToInt64 将任意类型转换为int64，转换失败返回0和false。
-func ToInt64(val interface{}) (int64, bool) {
+func ToInt64(val any) (int64, bool) {
 	if val == nil {
 		return 0, false
 	}
@@ -176,7 +176,7 @@ func ToInt64(val interface{}) (int64, bool) {
 }
 
 // ToUint 将任意类型转换为uint，转换失败返回0和false。
-func ToUint(val interface{}) (uint, bool) {
+func ToUint(val any) (uint, bool) {
 	if val == nil {
 		return 0, false
 	}
@@ -211,7 +211,7 @@ func ToUint(val interface{}) (uint, bool) {
 }
 
 // ToUint8 将任意类型转换为uint8，转换失败返回0和false。
-func ToUint8(val interface{}) (uint8, bool) {
+func ToUint8(val any) (uint8, bool) {
 	if val == nil {
 		return 0, false
 	}
@@ -246,7 +246,7 @@ func ToUint8(val interface{}) (uint8, bool) {
 }
 
 // ToUint16 将任意类型转换为uint16，转换失败返回0和false。
-func ToUint16(val interface{}) (uint16, bool) {
+func ToUint16(val any) (uint16, bool) {
 	if val == nil {
 		return 0, false
 	}
@@ -281,7 +281,7 @@ func ToUint16(val interface{}) (uint16, bool) {
 }
 
 // ToUint32 将任意类型转换为uint32，转换失败返回0和false。
-func ToUint32(val interface{}) (uint32, bool) {
+func ToUint32(val any) (uint32, bool) {
 	if val == nil {
 		return 0, false
 	}
@@ -316,7 +316,7 @@ func ToUint32(val interface{}) (uint32, bool) {
 }
 
 // ToUint64 将任意类型转换为uint64，转换失败返回0和false。
-func ToUint64(val interface{}) (uint64, bool) {
+func ToUint64(val any) (uint64, bool) {
 	if val == nil {
 		return 0, false
 	}

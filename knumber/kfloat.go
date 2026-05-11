@@ -18,7 +18,7 @@ func EqualF32(a, b float32) bool {
 }
 
 // any 数字类型 转 float32
-func ToFloat32(val interface{}) (float32, bool) {
+func ToFloat32(val any) (float32, bool) {
 	if val == nil {
 		return 0, false
 	}
@@ -52,7 +52,7 @@ func ToFloat32(val interface{}) (float32, bool) {
 }
 
 // any 数字类型 转 float64
-func ToFloat64(val interface{}) (float64, bool) {
+func ToFloat64(val any) (float64, bool) {
 	if val == nil {
 		return 0, false
 	}
