@@ -1,4 +1,10 @@
-# KUtils v0.2.3
+# KUtils v0.5.2
+
+## ksync
+- CountDownLatch 类似于 workgroup, wait带timeout
+- SafeChannel 杜绝向已关闭通道发送或重复关闭引发的 Panic
+- RingBuffer 无锁 SPSC Ring Buffer, 容量必须是 2 的幂次方: 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536
+- LockedRingBuffer 有锁版本的 MPMC Ring Buffer, 容量必须是 2 的幂次方: 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536
 
 ## knumber
 interface{} 数字类型 to float32 float64 int int8 int16 int32 int64 uint uint8 uint16 uint32 uint64
@@ -21,6 +27,8 @@ if val0, ok := kunumber.ToInt32(anymap["key0"]); ok{ // 返回 int32
 3. kobjs 实现obj to json5 string
 4. kslices slice的补充工具库
 5. kmaps map的补充工具库
+6. ksets 实现泛型的 set
+7. kcontext context 的扩展类, 支持context之间相互通信, 支持子节点context级联cancel, 相比原生context, 提供名称/ID查询功能
 
 ```go
 // StringFormatter 范例
