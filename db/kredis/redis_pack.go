@@ -18,3 +18,7 @@ type RedisMessagePackConstraints interface {
 	RedisRecord | RedisMessage
 	// constraints.Integer | constraints.Float
 }
+
+type KRedisClient interface {
+	KRedis | KRedisCluster
+}

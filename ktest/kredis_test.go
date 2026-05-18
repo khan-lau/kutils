@@ -21,7 +21,7 @@ func init() {
 	mainRoot := kcontext.NewContextTree("mainCtx").GetRoot()
 	ctx := mainRoot.NewChild("redis_ctx")
 
-	redisHd = kredis.NewKRedis(ctx, "10.50.145.10", 16379, "", "WuTz@DtXyTeCh.com", 0)
+	redisHd = kredis.NewKRedis(ctx, "10.50.145.10:16379", "", "", 0)
 	fmt.Println("init redis success!")
 }
 
