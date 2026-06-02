@@ -61,7 +61,7 @@ func canExposeInterface() bool {
 // 如果支持hack, 导出私有变量
 func exposeInterface(v reflect.Value) any {
 	if canExposeInterface() {
-		pFlag := (*flag)(unsafe.Pointer(uintptr(unsafe.Pointer(&v)) + flagOffset))
+		pFlag := (*flag)(unsafe.Add(unsafe.Pointer(&v), flagOffset))
 		*pFlag &= maskFlagRO
 		return v.Interface()
 	} else {
@@ -101,18 +101,18 @@ func ObjectToJson5WithoutFunc(obj any) string {
 func objectToJson5(key string, obj any, sb *strings.Builder, needExportFunc bool, level uint, ident string) {
 	val := mustBeValue(obj)
 	if len(key) > 0 {
-		sb.WriteString(fmt.Sprintf("\n%s%s:", strings.Repeat(ident, int(level)), key))
+		fmt.Fprintf(sb, "\n%s%s:", strings.Repeat(ident, int(level)), key)
 	}
 	var ptr *reflect.Value
-	if ptr == nil {
-		if val == reflect.ValueOf(nil) {
-			sb.WriteString(fmt.Sprintf("%v", "null"))
-			return
-		} else {
-			tmpNewVal := reflect.New(val.Type()) // 根据val的类型, 新建一个ptr类型的Value
-			ptr = &tmpNewVal
-		}
+	// if ptr == nil {
+	if val == reflect.ValueOf(nil) {
+		fmt.Fprintf(sb, "%v", "null")
+		return
+	} else {
+		tmpNewVal := reflect.New(val.Type()) // 根据val的类型, 新建一个ptr类型的Value
+		ptr = &tmpNewVal
 	}
+	// }
 	switch val.Kind() {
 	case reflect.Struct:
 		{
@@ -124,7 +124,7 @@ func objectToJson5(key string, obj any, sb *strings.Builder, needExportFunc bool
 				getType := val.Type() //reflect.TypeOf(ptr)
 				met, ok := getType.MethodByName("ToJson5")
 				if !ok {
-					sb.WriteString(fmt.Sprintf("%v", val.Interface()))
+					fmt.Fprintf(sb, "%v", val.Interface())
 					//panic("method not exist.")
 				} else {
 					sb.WriteString("[\n")
@@ -137,7 +137,7 @@ func objectToJson5(key string, obj any, sb *strings.Builder, needExportFunc bool
 
 					sb.WriteString(ret)
 					level--
-					sb.WriteString(fmt.Sprintf("%s]", strings.Repeat(ident, int(level))))
+					fmt.Fprintf(sb, "%s]", strings.Repeat(ident, int(level)))
 				}
 
 				return
@@ -150,19 +150,19 @@ func objectToJson5(key string, obj any, sb *strings.Builder, needExportFunc bool
 				level++
 				for e := l.Front(); e != nil; e = next {
 					next = e.Next()
-					sb.WriteString(fmt.Sprintf("%s%#v", strings.Repeat(ident, int(level)), e.Value))
+					fmt.Fprintf(sb, "%s%#v", strings.Repeat(ident, int(level)), e.Value)
 					if i < l.Len()-1 {
-						sb.WriteString(",")
+						sb.WriteByte(',')
 					}
 					i++
-					sb.WriteString("\n")
+					sb.WriteByte('\n')
 				}
 				level--
-				sb.WriteString(fmt.Sprintf("%s]", strings.Repeat(ident, int(level))))
+				fmt.Fprintf(sb, "%s]", strings.Repeat(ident, int(level)))
 				return
 			}
 
-			sb.WriteString(fmt.Sprintf("%s{", strings.Repeat(ident, int(level))))
+			fmt.Fprintf(sb, "%s{", strings.Repeat(ident, int(level)))
 			first := true
 			publicFieldNums := 0 // public成员遍历数量
 			fieldLen := val.NumField()
@@ -178,7 +178,7 @@ func objectToJson5(key string, obj any, sb *strings.Builder, needExportFunc bool
 				if first {
 					first = false
 				} else {
-					sb.WriteString(",")
+					sb.WriteByte(',')
 				}
 				publicFieldNums++
 
@@ -191,29 +191,29 @@ func objectToJson5(key string, obj any, sb *strings.Builder, needExportFunc bool
 					methodMap := getMethodMap(*ptr)
 					itemLen := len(methodMap)
 					if publicFieldNums > 0 && itemLen > 0 {
-						sb.WriteString(",")
+						sb.WriteByte(',')
 
-						sb.WriteString(fmt.Sprintf("\n%s%s:{\n", strings.Repeat(ident, int(level)), "func"))
+						fmt.Fprintf(sb, "\n%s%s:{\n", strings.Repeat(ident, int(level)), "func")
 
 						i := 0
 						level++
 
 						for k, v := range methodMap {
-							sb.WriteString(fmt.Sprintf("%s%s:\"%s\"", strings.Repeat(ident, int(level)), k, v))
+							fmt.Fprintf(sb, "%s%s:\"%s\"", strings.Repeat(ident, int(level)), k, v)
 							if i < itemLen-1 {
-								sb.WriteString(",")
+								sb.WriteByte(',')
 							}
-							sb.WriteString("\n")
+							sb.WriteByte('\n')
 							i++
 						}
 						level--
-						sb.WriteString(fmt.Sprintf("%s}", strings.Repeat(ident, int(level))))
+						fmt.Fprintf(sb, "%s}", strings.Repeat(ident, int(level)))
 					}
 				}
 			}
 
 			level--
-			sb.WriteString(fmt.Sprintf("\n%s}", strings.Repeat(ident, int(level))))
+			fmt.Fprintf(sb, "\n%s}", strings.Repeat(ident, int(level)))
 		}
 	case reflect.Array, reflect.Slice:
 		{
@@ -223,27 +223,27 @@ func objectToJson5(key string, obj any, sb *strings.Builder, needExportFunc bool
 			for i := 0; i < itemLen; i++ {
 				objectToJson5("", val.Index(i), sb, needExportFunc, level, ident)
 				if i < itemLen-1 {
-					sb.WriteString(",")
+					sb.WriteByte(',')
 				}
-				sb.WriteString("\n")
+				sb.WriteByte('\n')
 			}
 			level--
-			sb.WriteString(fmt.Sprintf("%s]", strings.Repeat(ident, int(level))))
+			fmt.Fprintf(sb, "%s]", strings.Repeat(ident, int(level)))
 		}
 	case reflect.String:
 		str := fmt.Sprintf("%s", exposeInterface(val))
 		str = strings.ReplaceAll(str, "\\", "\\\\")
 		str = strings.ReplaceAll(str, "\n", "\\n")
 		if len(key) == 0 {
-			sb.WriteString(fmt.Sprintf("%s\"%v\"", strings.Repeat(ident, int(level)), str))
+			fmt.Fprintf(sb, "%s\"%v\"", strings.Repeat(ident, int(level)), str)
 		} else {
-			sb.WriteString(fmt.Sprintf("\"%v\"", str))
+			fmt.Fprintf(sb, "\"%v\"", str)
 		}
 	case reflect.Func:
 		str := funcVarToJson5(key, *ptr)
-		sb.WriteString(fmt.Sprintf("\"func%s\"", str))
+		fmt.Fprintf(sb, "\"func%s\"", str)
 	case reflect.Map:
-		sb.WriteString(fmt.Sprintf("%s{", strings.Repeat(ident, int(level))))
+		fmt.Fprintf(sb, "%s{", strings.Repeat(ident, int(level)))
 		keys := val.MapKeys()
 		length := len(keys)
 		i := 0
@@ -252,18 +252,18 @@ func objectToJson5(key string, obj any, sb *strings.Builder, needExportFunc bool
 			strct := val.MapIndex(key)
 			objectToJson5(fmt.Sprintf("%v", key.Interface()), strct, sb, needExportFunc, level, ident)
 			if i < length-1 {
-				sb.WriteString(",")
+				sb.WriteByte(',')
 			}
 			i++
 		}
 		level--
-		sb.WriteString(fmt.Sprintf("\n%s}", strings.Repeat(ident, int(level))))
+		fmt.Fprintf(sb, "\n%s}", strings.Repeat(ident, int(level)))
 	default:
 		v1 := exposeInterface(val)
 		if nil == v1 {
-			sb.WriteString(fmt.Sprintf("%v", "null"))
+			fmt.Fprintf(sb, "%v", "null")
 		} else {
-			sb.WriteString(fmt.Sprintf("%v", exposeInterface(val)))
+			fmt.Fprintf(sb, "%v", exposeInterface(val))
 		}
 	}
 }
@@ -297,18 +297,18 @@ func ObjectDumpWithoutFunc(obj any) string {
 func objectDump(key string, obj any, sb *strings.Builder, needExportFunc bool) {
 	val := mustBeValue(obj)
 	if len(key) > 0 {
-		sb.WriteString(fmt.Sprintf("%s:", key))
+		fmt.Fprintf(sb, "%s:", key)
 	}
 	var ptr *reflect.Value
-	if ptr == nil {
-		if val == reflect.ValueOf(nil) {
-			sb.WriteString(fmt.Sprintf("%v", "null"))
-			return
-		} else {
-			tmpNewVal := reflect.New(val.Type()) // 根据val的类型, 新建一个ptr类型的Value
-			ptr = &tmpNewVal
-		}
+	// if ptr == nil {
+	if val == reflect.ValueOf(nil) {
+		fmt.Fprintf(sb, "%v", "null")
+		return
+	} else {
+		tmpNewVal := reflect.New(val.Type()) // 根据val的类型, 新建一个ptr类型的Value
+		ptr = &tmpNewVal
 	}
+	// }
 	switch val.Kind() {
 	case reflect.Struct:
 		{
@@ -320,7 +320,7 @@ func objectDump(key string, obj any, sb *strings.Builder, needExportFunc bool) {
 				getType := val.Type() //reflect.TypeOf(ptr)
 				met, ok := getType.MethodByName("ToString")
 				if !ok {
-					sb.WriteString(fmt.Sprintf("%v", val.Interface()))
+					fmt.Fprintf(sb, "%v", val.Interface())
 					//panic("method not exist.")
 				} else {
 					var args = []reflect.Value{val}
@@ -336,20 +336,20 @@ func objectDump(key string, obj any, sb *strings.Builder, needExportFunc bool) {
 				l, _ := v.(list.List)
 				var next *list.Element
 				i := 0
-				sb.WriteString("[")
+				sb.WriteByte('[')
 				for e := l.Front(); e != nil; e = next {
 					next = e.Next()
-					sb.WriteString(fmt.Sprintf("%#v", e.Value))
+					fmt.Fprintf(sb, "%#v", e.Value)
 					if i < l.Len()-1 {
 						sb.WriteString(",")
 					}
 					i++
 				}
-				sb.WriteString("]")
+				sb.WriteByte(']')
 				return
 			}
 
-			sb.WriteString("{")
+			sb.WriteByte('{')
 			first := true
 			publicFieldNums := 0 // public成员遍历数量
 			fieldLen := val.NumField()
@@ -364,7 +364,7 @@ func objectDump(key string, obj any, sb *strings.Builder, needExportFunc bool) {
 				if first {
 					first = false
 				} else {
-					sb.WriteString(",")
+					sb.WriteByte(',')
 				}
 				publicFieldNums++
 				objectDump(fieldName, subObj, sb, needExportFunc)
@@ -374,38 +374,38 @@ func objectDump(key string, obj any, sb *strings.Builder, needExportFunc bool) {
 			if needExportFunc {
 				if ptr.IsValid() {
 					if publicFieldNums > 0 {
-						sb.WriteString(",")
+						sb.WriteByte(',')
 					}
-					sb.WriteString(fmt.Sprintf("%s:", "func"))
-					sb.WriteString("{")
+					fmt.Fprintf(sb, "%s:", "func")
+					sb.WriteByte('{')
 					getMethod(*ptr, sb)
-					sb.WriteString("}")
+					sb.WriteByte('}')
 				}
 			}
-			sb.WriteString("}")
+			sb.WriteByte('}')
 		}
 	case reflect.Array, reflect.Slice:
 		{
-			sb.WriteString("[")
+			sb.WriteByte('[')
 			itemLen := val.Len()
 			for i := 0; i < itemLen; i++ {
 				objectDump("", val.Index(i), sb, needExportFunc)
 				if i < itemLen-1 {
-					sb.WriteString(",")
+					sb.WriteByte(',')
 				}
 			}
-			sb.WriteString("]")
+			sb.WriteByte(']')
 		}
 	case reflect.String:
 		str := fmt.Sprintf("%s", exposeInterface(val))
 		str = strings.ReplaceAll(str, "\\", "\\\\")
 		str = strings.ReplaceAll(str, "\n", "\\n")
-		sb.WriteString(fmt.Sprintf("\"%v\"", str))
+		fmt.Fprintf(sb, "\"%v\"", str)
 	case reflect.Func:
 		str := funcVarToJson5(key, *ptr)
-		sb.WriteString(fmt.Sprintf("\"func%s\"", str))
+		fmt.Fprintf(sb, "\"func%s\"", str)
 	case reflect.Map:
-		sb.WriteString("{")
+		sb.WriteByte('{')
 		keys := val.MapKeys()
 		length := len(keys)
 		i := 0
@@ -413,17 +413,17 @@ func objectDump(key string, obj any, sb *strings.Builder, needExportFunc bool) {
 			strct := val.MapIndex(key)
 			objectDump(fmt.Sprintf("%v", key.Interface()), strct, sb, needExportFunc)
 			if i < length-1 {
-				sb.WriteString(",")
+				sb.WriteByte(',')
 			}
 			i++
 		}
-		sb.WriteString("}")
+		sb.WriteByte('}')
 	default:
 		v1 := exposeInterface(val)
 		if nil == v1 {
-			sb.WriteString(fmt.Sprintf("%v", "null"))
+			fmt.Fprintf(sb, "%v", "null")
 		} else {
-			sb.WriteString(fmt.Sprintf("%v", exposeInterface(val)))
+			fmt.Fprintf(sb, "%v", exposeInterface(val))
 		}
 	}
 }
@@ -482,7 +482,7 @@ func mustBeValue(obj any) reflect.Value {
 // }
 
 // 将函数类型变量转换为字符串格式
-func funcVarToJson5(name string, val reflect.Value) string {
+func funcVarToJson5(_ string, val reflect.Value) string {
 	var sb strings.Builder
 
 	valv := val.Elem()
@@ -490,7 +490,7 @@ func funcVarToJson5(name string, val reflect.Value) string {
 	numArgs := tpv.NumIn()     // 获取参数个数
 	numResults := tpv.NumOut() // 获取返回值个数
 
-	sb.WriteString("(")
+	sb.WriteByte('(')
 	for i := 0; i < numArgs; i++ {
 		argType := tpv.In(i)
 		sb.WriteString(argType.String())
@@ -498,10 +498,10 @@ func funcVarToJson5(name string, val reflect.Value) string {
 			sb.WriteString(", ")
 		}
 	}
-	sb.WriteString(")")
+	sb.WriteByte(')')
 
 	if numResults > 0 {
-		sb.WriteString("(")
+		sb.WriteByte('(')
 		// 获取返回值类型
 		for i := 0; i < numResults; i++ {
 			resultType := tpv.Out(i)
@@ -510,7 +510,7 @@ func funcVarToJson5(name string, val reflect.Value) string {
 				sb.WriteString(", ")
 			}
 		}
-		sb.WriteString(")")
+		sb.WriteByte(')')
 	}
 
 	return sb.String()
@@ -535,12 +535,12 @@ func funcToJson5(name string, val reflect.Value) string {
 			}
 		}
 
-		sb.WriteString(")")
+		sb.WriteByte(')')
 
 		// 获取返回值个数
 		numResults := methodType.NumOut()
 		if numResults > 0 {
-			sb.WriteString("(")
+			sb.WriteByte('(')
 			// 获取返回值类型
 			for i := 0; i < numResults; i++ {
 				resultType := methodType.Out(i)
@@ -549,7 +549,7 @@ func funcToJson5(name string, val reflect.Value) string {
 					sb.WriteString(", ")
 				}
 			}
-			sb.WriteString(")")
+			sb.WriteByte(')')
 		}
 	} else {
 		fmt.Printf("error: %s\n", "method is invalid")
@@ -579,7 +579,7 @@ func getMethod(val reflect.Value, sb *strings.Builder) {
 	itemLen := argType.NumMethod()
 	for i := 0; i < itemLen; i++ {
 		m := argType.Method(i)
-		sb.WriteString(fmt.Sprintf("%s:\"%s\"", m.Name, funcToJson5(m.Name, val)))
+		fmt.Fprintf(sb, "%s:\"%s\"", m.Name, funcToJson5(m.Name, val))
 		if i < itemLen-1 {
 			sb.WriteString(",")
 		}
