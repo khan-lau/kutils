@@ -37,6 +37,7 @@ type LoggerConfigure struct {
 	flushInterval int64  // 强制刷盘周期, 单位 毫秒
 	bufferSize    int64  // 缓冲区大小, 单位 Byte
 	MaxAge        int    `json:"maxAge"`       // 日志最长保留时间, 单位 小时
+	MaxSize       int64  `json:"maxSize"`      // 单文件最大滚动大小, 单位 byte, 超过后强制滚动
 	RotationTime  int    `json:"rotationTime"` // 日志滚动周期, 单位 小时, 24小时滚动一个文件
 	ToConsole     bool   `json:"console"`      // 是否输出到控制台
 	LogFile       string `json:"logFile"`      // 输出到文件, 如果文件名为空, 则不输出到文件
@@ -48,6 +49,7 @@ func NewConfigure() *LoggerConfigure {
 		Colorful:     false,
 		Async:        false,
 		MaxAge:       720,
+		MaxSize:      10 * 1024 * 1024 * 1024, // 默认最大文件大小 10G
 		RotationTime: 24,
 		ToConsole:    false,
 		LogFile:      "",
@@ -76,16 +78,25 @@ func (that *LoggerConfigure) SetMaxAge(age int) *LoggerConfigure {
 	return that
 }
 
+// 设置单文件最大滚动大小, 单位 byte, 超过后强制滚动, 默认10G
+func (that *LoggerConfigure) SetMaxSize(size int64) *LoggerConfigure {
+	that.MaxSize = size
+	return that
+}
+
+// 设置日志滚动时间, 单位 小时, 默认720小时(30天)
 func (that *LoggerConfigure) SetRotationTime(time int) *LoggerConfigure {
 	that.RotationTime = time
 	return that
 }
 
+// 设置是否输出到控制台
 func (that *LoggerConfigure) ShowConsole(flag bool) *LoggerConfigure {
 	that.ToConsole = flag
 	return that
 }
 
+// 设置日志输出文件, 如果文件名为空, 则不输出到文件
 func (that *LoggerConfigure) SetLogFile(file string) *LoggerConfigure {
 	that.LogFile = file
 	return that

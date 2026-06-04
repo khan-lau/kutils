@@ -3,6 +3,7 @@ package klogger
 import (
 	"os"
 	"path"
+	"runtime"
 	"strings"
 	"time"
 
@@ -114,9 +115,18 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 			conf.RotationTime = 24 // 默认24小时滚动一次
 		}
 
-		logFile, _ := rotatelogs.New(filen_prefix+".%Y%m%d%H%M"+file_suffix,
-			rotatelogs.WithMaxAge(time.Duration(conf.MaxAge)*time.Hour),             // 最长保存30天
-			rotatelogs.WithRotationTime(time.Duration(conf.RotationTime)*time.Hour)) // 24小时切割一次
+		logFilePattern := filen_prefix + ".%Y%m%d%H%M.%N" + file_suffix
+		options := []rotatelogs.Option{
+			rotatelogs.WithRotationTime(time.Duration(conf.RotationTime) * time.Hour), // 24小时切割一次
+			rotatelogs.WithRotationSize(10 * 1024 * 1024 * 1024),                      // 单文件最大10G,切割一次
+			rotatelogs.WithMaxAge(time.Duration(conf.MaxAge) * time.Hour),             // 最长保存30天
+		}
+		// 只有非 Windows 系统（如 Linux/macOS）才开启软链接功能
+		if runtime.GOOS != "windows" {
+			options = append(options, rotatelogs.WithLinkName(filen_prefix+file_suffix)) // 软链接
+		}
+
+		logFile, _ := rotatelogs.New(logFilePattern, options...)
 
 		// logFile := &lumberjack.Logger{
 		// 	Filename:   filen_prefix + file_suffix,
