@@ -3,12 +3,12 @@ package kredis
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/khan-lau/kutils/container/kcontext"
 	kslices "github.com/khan-lau/kutils/container/kslices"
-	"github.com/khan-lau/kutils/container/kstrings"
 	"github.com/khan-lau/kutils/klogger"
 
 	redisHd "github.com/redis/go-redis/v9"
@@ -483,8 +483,8 @@ func (that *KRedisCluster) JsonType(key string, path string) ([]string, error) {
 		return nil, err
 	}
 
-	str, err := cmd.Text()
-	kstrings.Println("{}, {}", str, err)
+	// str, err := cmd.Text()
+	// fmt.Printf("%s, %v\n", str, err)
 
 	// JSON.TYPE 返回一个字符串数组（即使只有一个结果），例如 `["string"]`
 	types, err := cmd.Slice()
@@ -507,7 +507,7 @@ func (that *KRedisCluster) JsonType(key string, path string) ([]string, error) {
 		case nil: // 如果 v 是 nil，则忽略它（通常不会发生）
 			continue
 		default:
-			return nil, kstrings.Errorf("unexpected type: {}", val) // 如果不是预期的类型（这里是 string 或 []byte），则返回错误
+			return nil, fmt.Errorf("unexpected type: %v", val) // 如果不是预期的类型（这里是 string 或 []byte），则返回错误
 		}
 		// stringTypes[i] = v.(string) // 确保切片中的元素类型为 string
 	}
@@ -591,12 +591,12 @@ func (that *KRedisCluster) JsonObjLen(key string, path string) ([]int64, error) 
 			case nil:
 				lenArray = append(lenArray, -1)
 			default:
-				return nil, kstrings.Errorf("unexpected type: {}", v)
+				return nil, fmt.Errorf("unexpected type: %v", v)
 			}
 		}
 		return lenArray, nil
 	default:
-		return nil, kstrings.Errorf("unexpected type: %v", retVal)
+		return nil, fmt.Errorf("unexpected type: %v", retVal)
 	}
 
 }

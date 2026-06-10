@@ -3,11 +3,11 @@ package kcontext
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sync"
 
 	"github.com/khan-lau/kutils/container/kmaps"
-	"github.com/khan-lau/kutils/container/kstrings"
 	"github.com/khan-lau/kutils/kuuid"
 )
 
@@ -376,7 +376,7 @@ func (that *ContextNode) String() string {
 	// 序列化为格式化JSON
 	data, err := json.MarshalIndent(jn, "", "  ")
 	if err != nil {
-		return kstrings.Sprintf("{\"error\": \"failed to marshal JSON: {}\"}", err)
+		return fmt.Sprintf("{\"error\": \"failed to marshal JSON: %v\"}", err)
 	}
 	return string(data)
 }
