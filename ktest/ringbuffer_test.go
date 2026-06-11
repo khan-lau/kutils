@@ -3,6 +3,7 @@ package ktest
 import (
 	"fmt"
 	"runtime"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -1045,12 +1046,16 @@ func TestThroughput_All_Batch_Comparison(t *testing.T) {
 	t.Run("LockedRingBuffer_DequeueTo", TestThroughput_Batch_DequeueTo_LockedRingBuffer)
 }
 
+// 构造器边界测试
 func Fuzz_LockedRingBuffer_Creator(f *testing.F) {
 	// 种子数据：边界值 + 典型值
-	seeds := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 1024, 4096, 65536}
-	for _, size := range seeds {
-		f.Add(size)
-	}
+	// seeds := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 1024, 4096, 65536}
+	// for _, size := range seeds {
+	// 	f.Add(size)
+	// }
+
+	// 精简写法
+	slices.All([]int{0, 1, 2, 3, 4, 5, 6, 7, 8, 1024, 4096, 65536})(func(idx int, v int) bool { f.Add(v); return true })
 	f.Fuzz(func(t *testing.T, size int) {
 		_, err := ksync.NewLockedRingBuffer[int](uint64(size))
 		if err != nil {
