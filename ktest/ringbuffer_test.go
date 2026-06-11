@@ -1044,3 +1044,17 @@ func TestThroughput_All_Batch_Comparison(t *testing.T) {
 	t.Run("RingBuffer_DequeueTo", TestThroughput_Batch_DequeueTo_RingBuffer)
 	t.Run("LockedRingBuffer_DequeueTo", TestThroughput_Batch_DequeueTo_LockedRingBuffer)
 }
+
+func Fuzz_LockedRingBuffer_Creator(f *testing.F) {
+	// 种子数据：边界值 + 典型值
+	seeds := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 1024, 4096, 65536}
+	for _, size := range seeds {
+		f.Add(size)
+	}
+	f.Fuzz(func(t *testing.T, size int) {
+		_, err := ksync.NewLockedRingBuffer[int](uint64(size))
+		if err != nil {
+			t.Errorf("Unexpected error: %v, size: %d", err, size)
+		}
+	})
+}

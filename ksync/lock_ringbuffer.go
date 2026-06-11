@@ -19,7 +19,7 @@ type LockedRingBuffer[T any] struct {
 }
 
 func NewLockedRingBuffer[T any](size uint64) (*LockedRingBuffer[T], error) {
-	if size == 0 || (size&(size-1)) != 0 {
+	if size == 0 || size == 1 || (size&(size-1)) != 0 {
 		return nil, ErrRingBufferSize
 	}
 

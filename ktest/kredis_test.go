@@ -228,6 +228,6 @@ func LogFunc(lvl klogger.Level, f string, args ...any) {
 	case klogger.FatalLevel:
 		klog.KFatal(skip, f, args...)
 	default:
-		klog.KInfo(skip, fmt.Sprintf(lvl.String()+": "+f), args)
+		klog.KInfo(skip, lvl.String()+": "+f, args)
 	}
 }
