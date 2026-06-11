@@ -372,7 +372,7 @@ func objectArrayAppend(sbuf *strings.Builder, a any, seenMap map[any]any) {
 func booleanArrayAppend(sbuf *strings.Builder, a []bool) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%v", val))
+		fmt.Fprintf(sbuf, "%v", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -383,7 +383,7 @@ func booleanArrayAppend(sbuf *strings.Builder, a []bool) {
 func byteArrayAppend(sbuf *strings.Builder, a []byte) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%v", val))
+		fmt.Fprintf(sbuf, "%v", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -394,7 +394,7 @@ func byteArrayAppend(sbuf *strings.Builder, a []byte) {
 func int8ArrayAppend(sbuf *strings.Builder, a []int8) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%d", val))
+		fmt.Fprintf(sbuf, "%d", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -405,7 +405,7 @@ func int8ArrayAppend(sbuf *strings.Builder, a []int8) {
 func charArrayAppend(sbuf *strings.Builder, a []rune) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%c", val))
+		fmt.Fprintf(sbuf, "%c", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -416,7 +416,7 @@ func charArrayAppend(sbuf *strings.Builder, a []rune) {
 func shortArrayAppend(sbuf *strings.Builder, a []int16) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%v", val))
+		fmt.Fprintf(sbuf, "%v", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -427,7 +427,7 @@ func shortArrayAppend(sbuf *strings.Builder, a []int16) {
 func intArrayAppend(sbuf *strings.Builder, a []int) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%d", val))
+		fmt.Fprintf(sbuf, "%d", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -438,7 +438,7 @@ func intArrayAppend(sbuf *strings.Builder, a []int) {
 func longArrayAppend(sbuf *strings.Builder, a []int64) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%d", val))
+		fmt.Fprintf(sbuf, "%d", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -449,7 +449,7 @@ func longArrayAppend(sbuf *strings.Builder, a []int64) {
 func floatArrayAppend(sbuf *strings.Builder, a []float32) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%f", val))
+		fmt.Fprintf(sbuf, "%f", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -460,7 +460,7 @@ func floatArrayAppend(sbuf *strings.Builder, a []float32) {
 func doubleArrayAppend(sbuf *strings.Builder, a []float64) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%f", val))
+		fmt.Fprintf(sbuf, "%f", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -471,7 +471,7 @@ func doubleArrayAppend(sbuf *strings.Builder, a []float64) {
 func uint16ArrayAppend(sbuf *strings.Builder, a []uint16) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%d", val))
+		fmt.Fprintf(sbuf, "%d", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -482,7 +482,7 @@ func uint16ArrayAppend(sbuf *strings.Builder, a []uint16) {
 func uintArrayAppend(sbuf *strings.Builder, a []uint) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%d", val))
+		fmt.Fprintf(sbuf, "%d", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -493,7 +493,7 @@ func uintArrayAppend(sbuf *strings.Builder, a []uint) {
 func uint32ArrayAppend(sbuf *strings.Builder, a []uint32) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%d", val))
+		fmt.Fprintf(sbuf, "%d", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -504,7 +504,7 @@ func uint32ArrayAppend(sbuf *strings.Builder, a []uint32) {
 func uint64ArrayAppend(sbuf *strings.Builder, a []uint64) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%d", val))
+		fmt.Fprintf(sbuf, "%d", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -515,7 +515,7 @@ func uint64ArrayAppend(sbuf *strings.Builder, a []uint64) {
 func complex64ArrayAppend(sbuf *strings.Builder, a []complex64) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%v", val))
+		fmt.Fprintf(sbuf, "%v", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
@@ -526,7 +526,7 @@ func complex64ArrayAppend(sbuf *strings.Builder, a []complex64) {
 func complex128ArrayAppend(sbuf *strings.Builder, a []complex128) {
 	sbuf.WriteRune('[')
 	for i, val := range a {
-		sbuf.WriteString(fmt.Sprintf("%v", val))
+		fmt.Fprintf(sbuf, "%v", val)
 		if i != len(a)-1 {
 			sbuf.WriteString(", ")
 		}
