@@ -1054,7 +1054,7 @@ func Fuzz_LockedRingBuffer_Creator(f *testing.F) {
 	// 	f.Add(size)
 	// }
 
-	// 精简写法
+	// 精简写法, 但是闭包与变量捕获, 以及迭代器内部的控制流都会增加额外的性能开销
 	slices.All([]int{0, 1, 2, 3, 4, 5, 6, 7, 8, 1024, 4096, 65536})(func(idx int, v int) bool { f.Add(v); return true })
 	f.Fuzz(func(t *testing.T, size int) {
 		_, err := ksync.NewLockedRingBuffer[int](uint64(size))
