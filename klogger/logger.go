@@ -115,10 +115,14 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 			conf.RotationTime = 24 // 默认24小时滚动一次
 		}
 
-		logFilePattern := filen_prefix + ".%Y%m%d%H%M.%N" + file_suffix
+		if conf.MaxSize == 0 {
+			conf.MaxSize = 10 * 1024 * 1024 * 1024 // 单文件最大滚动大小, 单位 byte, 超过后强制滚动, 默认10G
+		}
+
+		logFilePattern := filen_prefix + ".%Y%m%d%H%M" + file_suffix
 		options := []rotatelogs.Option{
 			rotatelogs.WithRotationTime(time.Duration(conf.RotationTime) * time.Hour), // 24小时切割一次
-			rotatelogs.WithRotationSize(10 * 1024 * 1024 * 1024),                      // 单文件最大10G,切割一次
+			rotatelogs.WithRotationSize(conf.MaxSize),                                 // 单文件最大10G,切割一次
 			rotatelogs.WithMaxAge(time.Duration(conf.MaxAge) * time.Hour),             // 最长保存30天
 		}
 		// 只有非 Windows 系统（如 Linux/macOS）才开启软链接功能
