@@ -27,6 +27,12 @@ var (
 )
 
 // NewRingBuffer 创建 RingBuffer，size 必须是 2 的幂
+//
+//   - @param size 容量，必须是 2 的幂次方, 实际可以存储的容量是 size - 1
+//
+//   - @return (*LockedRingBuffer[T], error) 返回 LockedRingBuffer 和可能的错误
+//
+//   - @error ErrRingBufferSize 如果 size 不符合要求，则返回此错误
 func NewRingBuffer[T any](size uint64) (*RingBuffer[T], error) {
 	if size == 0 || (size&(size-1)) != 0 {
 		return nil, ErrRingBufferSize

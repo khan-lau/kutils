@@ -18,6 +18,13 @@ type LockedRingBuffer[T any] struct {
 	closed    bool       // 闭塞状态
 }
 
+// NewLockedRingBuffer 创建 LockedRingBuffer
+//
+//   - @param size 容量，必须是 2 的幂次方, 实际可以存储的容量是 size - 1
+//
+//   - @return (*LockedRingBuffer[T], error) 返回 LockedRingBuffer 和可能的错误
+//
+//   - @error ErrRingBufferSize 如果 size 不符合要求，则返回此错误
 func NewLockedRingBuffer[T any](size uint64) (*LockedRingBuffer[T], error) {
 	if size == 0 || size == 1 || (size&(size-1)) != 0 {
 		return nil, ErrRingBufferSize

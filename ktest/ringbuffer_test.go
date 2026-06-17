@@ -12,6 +12,28 @@ import (
 	"github.com/khan-lau/kutils/ksync"
 )
 
+func Test_LockedRingBuffer_Len(t *testing.T) {
+	rb, err := ksync.NewLockedRingBuffer[int](8) // 8个容量，实际只可以存储7个元素
+	if err != nil {
+		t.Error(err)
+	}
+
+	cap := rb.Cap() - 1
+	// 填充数据
+	for i := range cap {
+		rb.Enqueue(int(i))
+		len := rb.Len()
+		t.Logf("i: %d, len: %d, cap: %d", i, len, cap)
+	}
+
+	// 检查长度是否正确
+	len := rb.Len()
+
+	if len != cap {
+		t.Errorf("Expected length %d but got %d", cap, len)
+	}
+}
+
 // ============================================================
 // 吞吐量测试：测量每秒处理的消息数量
 // ============================================================
