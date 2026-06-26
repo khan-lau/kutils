@@ -2,8 +2,6 @@ module github.com/khan-lau/kutils
 
 go 1.24.0
 
-toolchain go1.24.11
-
 require (
 	github.com/andybalholm/brotli v1.1.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
