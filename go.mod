@@ -1,6 +1,6 @@
 module github.com/khan-lau/kutils
 
-go 1.24.0
+go 1.24.0 
 
 require (
 	github.com/andybalholm/brotli v1.1.0
