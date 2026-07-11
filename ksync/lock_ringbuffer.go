@@ -41,43 +41,65 @@ func NewLockedRingBuffer[T any](size uint64) (*LockedRingBuffer[T], error) {
 
 // ====================== 非阻塞接口 ======================
 
-// TryEnqueue 非阻塞单条写入
-func (that *LockedRingBuffer[T]) TryEnqueue(item T) bool {
+// TryEnqueue 非阻塞单条写入, 队列关闭时禁止写入
+//
+// 参数:
+//
+//	@param item 要写入的元素
+//
+// 返回:
+//
+//	@returns bool 是否成功写入
+//	@returns bool 队列是否有效，true 表示队列有效, false 表示队列已关闭或缓冲区为空
+func (that *LockedRingBuffer[T]) TryEnqueue(item T) (bool, bool) {
 	if !that.mu.TryLock() {
-		return false
+		return false, true
 	}
 	defer that.mu.Unlock()
 
+	if that.closed || that.buffer == nil {
+		return false, false
+	}
+
 	// 检查队列是否已满或已关闭
-	if that.closed || that.buffer == nil || ((that.tail+1)&that.mask) == that.head {
-		return false
+	if ((that.tail + 1) & that.mask) == that.head {
+		return false, true
 	}
 
 	// 直接使用 mask 实现环形索引
 	that.buffer[that.tail&that.mask] = item // ← 显式 & mask
 	that.tail = (that.tail + 1) & that.mask // ← 环形递增
 	that.condEmpty.Signal()                 // 通知消费者有新数据
-	return true
+	return true, true
 }
 
-// TryEnqueueBatch 非阻塞批量写入
-func (that *LockedRingBuffer[T]) TryEnqueueBatch(items []T) int {
+// TryEnqueueBatch 非阻塞批量写入, 队列关闭时禁止写入
+//
+// 参数:
+//
+//	@param items 要写入的元素切片
+//
+// 返回:
+//
+//	@returns int 实际写入的数量（可能小于 len(items)）
+//	@returns bool 队列是否有效，true 表示队列有效, false 表示队列已关闭或缓冲区为空
+func (that *LockedRingBuffer[T]) TryEnqueueBatch(items []T) (int, bool) {
 	if len(items) == 0 {
-		return 0
+		return 0, true
 	}
 
 	if !that.mu.TryLock() {
-		return 0
+		return 0, true
 	}
 	defer that.mu.Unlock()
 
 	if that.closed || that.buffer == nil {
-		return 0
+		return 0, false
 	}
 
 	available := (that.head - that.tail - 1) & that.mask
 	if available == 0 {
-		return 0
+		return 0, true
 	}
 
 	n := len(items)
@@ -101,52 +123,73 @@ func (that *LockedRingBuffer[T]) TryEnqueueBatch(items []T) int {
 	// 更新 tail（环形递增）
 	that.tail = (that.tail + uint64(n)) & that.mask
 	that.condEmpty.Signal() // 通知消费者有新数据
-	return n
+	return n, true
 }
 
-// TryDequeue 非阻塞单条读取
-func (that *LockedRingBuffer[T]) TryDequeue() (T, bool) {
+// TryDequeue 非阻塞单条读取, 队列关闭时, 还能读取最后一次数据
+//
+// 返回:
+//
+//	@returns T 读取到的数据
+//	@returns bool 队列是否取到数据，true 表示取到数据成功, false 表示未取到数据
+//	@returns bool 队列是否有效，true 表示队列有效, false 表示队列已关闭或缓冲区为空
+func (that *LockedRingBuffer[T]) TryDequeue() (T, bool, bool) {
 	if !that.mu.TryLock() {
 		var zero T
-		return zero, false
+		return zero, false, true
 	}
 	defer that.mu.Unlock()
 
-	if that.buffer == nil || that.head == that.tail {
+	// 如果缓冲区为空, 则直接返回
+	if that.buffer == nil {
 		var zero T
-		return zero, false
+		return zero, false, false
+	}
+
+	if that.head == that.tail {
+		var zero T
+		return zero, false, true
 	}
 
 	item := that.buffer[that.head&that.mask]
 	that.head = (that.head + 1) & that.mask
 	that.condFull.Signal() // 通知生产者空间已释放
-	return item, true
+
+	if that.closed {
+		return item, true, false
+	}
+	return item, true, true
 }
 
-// TryDequeueBatch 非阻塞批量读取
+// TryDequeueBatch 非阻塞批量读取, 队列关闭时, 还能读取最后一次数据
 //
-//   - 参数
+// 参数:
 //
-//   - max: 最大读取数量
+//	@param max 最大读取数量
 //
-//   - 返回
+// 返回:
 //
-//   - 读取到的数据
-//
-//   - 读取到的数量
-func (that *LockedRingBuffer[T]) TryDequeueBatch(max int) ([]T, int) {
+//	@returns []T 读取到的数据
+//	@returns int 读取到的数量
+//	@returns bool 队列是否有效，true 表示队列有效, false 表示队列已关闭或缓冲区为空
+func (that *LockedRingBuffer[T]) TryDequeueBatch(max int) ([]T, int, bool) {
 	if max <= 0 {
-		return nil, 0
+		return nil, 0, true
 	}
 	if !that.mu.TryLock() {
-		return nil, 0
+		return nil, 0, true
 	}
 	defer that.mu.Unlock()
 
+	// 如果缓冲区为空, 则直接返回
+	if that.buffer == nil {
+		return nil, 0, false
+	}
+
 	available := (that.tail - that.head) & that.mask
 	// 如果队列空, 则直接返回
-	if that.buffer == nil || available == 0 {
-		return nil, 0
+	if available == 0 {
+		return nil, 0, true
 	}
 
 	if uint64(max) > available {
@@ -169,26 +212,42 @@ func (that *LockedRingBuffer[T]) TryDequeueBatch(max int) ([]T, int) {
 
 	that.head = (that.head + uint64(max)) & that.mask
 	that.condFull.Signal() // 通知生产者空间已释放
-	return result, max
+
+	if that.closed {
+		return result, max, false
+	}
+	return result, max, true
 }
 
-// TryDequeueTo 非阻塞地将数据拷贝到调用方提供的 dst 切片中
-// 返回实际拷贝的元素数量（0 表示队列为空或 dst 长度为0）
-// 这是非阻塞版本，不会等待
-func (that *LockedRingBuffer[T]) TryDequeueTo(dst []T) int {
+// TryDequeueTo 非阻塞地将数据拷贝到调用方提供的 dst 切片中, 队列关闭时, 还能读取最后一次数据
+//
+// 参数:
+//
+//	@param dst: 目标切片，用于存储读取到的数据
+//
+// 返回:
+//
+//	@returns int 读取到的数据数量
+//	@returns bool 队列是否有效，true 表示队列有效, false 表示队列已关闭或缓冲区为空
+func (that *LockedRingBuffer[T]) TryDequeueTo(dst []T) (int, bool) {
 	if len(dst) == 0 {
-		return 0
+		return 0, true
 	}
 
 	if !that.mu.TryLock() {
-		return 0
+		return 0, true
 	}
 	defer that.mu.Unlock()
 
+	// 如果缓冲区为空, 则直接返回
+	if that.buffer == nil {
+		return 0, false
+	}
+
 	available := (that.tail - that.head) & that.mask
 	// 如果队列满, 则直接返回
-	if that.closed || that.buffer == nil || available == 0 {
-		return 0
+	if available == 0 {
+		return 0, true
 	}
 
 	// 实际能拷贝的数量不能超过 dst 的长度和可用数据量
@@ -216,7 +275,10 @@ func (that *LockedRingBuffer[T]) TryDequeueTo(dst []T) int {
 	// 通知生产者有空间可用
 	that.condFull.Signal()
 
-	return n
+	if that.closed {
+		return n, false
+	}
+	return n, true
 }
 
 // ================== 阻塞接口 NoWait（正常 Cond 实现） ===================
@@ -302,15 +364,12 @@ func (that *LockedRingBuffer[T]) DequeueNoWait() (T, bool) {
 // DequeueBatchNoWait 阻塞批量读取
 // 如果无法获取锁，它会阻塞直到获取锁; 获取锁后，如果队列为空或已关闭，则返回 nil, 0; 否则，返回读取到的数据切片和实际读取的数量
 //
-//   - 参数
+//	参数
+//	@param max: 最大读取数量
 //
-//   - max: 最大读取数量
-//
-//   - 返回
-//
-//   - 读取到的数据
-//
-//   - 读取到的数量
+//	返回
+//	@returns []T: 读取到的数据
+//	@returns int: 读取到的数量
 func (that *LockedRingBuffer[T]) DequeueBatchNoWait(max int) ([]T, int) {
 	if max <= 0 {
 		return nil, 0
@@ -544,11 +603,13 @@ func (that *LockedRingBuffer[T]) DequeueWait(timeout time.Duration) (T, bool) {
 // 最多读取 max 个元素，实际读取数量取决于缓冲区当前可用元素数量。
 //
 // 参数:
-//   - max: 最大读取数量，必须大于0
+//
+//	@param max: 最大读取数量，必须大于0
 //
 // 返回:
-//   - []T: 取出的元素数组
-//   - int: 实际取出的元素数量
+//
+//	@returns []T: 取出的元素数组
+//	@returns int: 实际取出的元素数量
 func (that *LockedRingBuffer[T]) DequeueBatchWait(max int, timeout time.Duration) ([]T, int) {
 	if max <= 0 {
 		return nil, 0
@@ -751,11 +812,13 @@ func (that *LockedRingBuffer[T]) Dequeue() (T, bool) {
 // 最多读取 max 个元素，实际读取数量取决于缓冲区当前可用元素数量。
 //
 // 参数:
-//   - max: 最大读取数量，必须大于0
+//
+//	@param max: 最大读取数量，必须大于0
 //
 // 返回:
-//   - []T: 取出的元素数组
-//   - int: 实际取出的元素数量
+//
+//	@returns []T: 取出的元素数组
+//	@returns int: 实际取出的元素数量
 func (that *LockedRingBuffer[T]) DequeueBatch(max int) ([]T, int) {
 	if max <= 0 {
 		return nil, 0

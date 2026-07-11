@@ -763,6 +763,56 @@ func (mr *KRedis) Publish(topic string, payload any) error {
 	return mr.Client.Publish(mr.ctx.Context(), topic, payload).Err()
 }
 
+// 使用pipeline 向指定topic发布多条消息
+func (that *KRedis) PublishArray(messages []*RedisMessage) []error {
+	if len(messages) == 0 {
+		return nil
+	}
+
+	pipeline := that.Client.Pipeline()
+	for _, msg := range messages {
+		pipeline.Publish(that.ctx.Context(), msg.Topic, msg.Message)
+	}
+
+	cmders, err := pipeline.Exec(that.ctx.Context())
+	if nil == err {
+		return nil // 整批完全成功
+	}
+
+	errs := make([]error, 0, len(messages))
+	for _, cmd := range cmders {
+		if nil != cmd.Err() {
+			errs = append(errs, cmd.Err())
+		}
+	}
+	return errs
+}
+
+// 使用pipeline 向指定topic发布多条消息
+func (that *KRedis) PublishArrayWithCtx(ctx *kcontext.ContextNode, messages []*RedisMessage) []error {
+	if len(messages) == 0 {
+		return nil
+	}
+
+	pipeline := that.Client.Pipeline()
+	for _, msg := range messages {
+		pipeline.Publish(ctx.Context(), msg.Topic, msg.Message)
+	}
+
+	cmders, err := pipeline.Exec(ctx.Context())
+	if nil == err {
+		return nil // 整批完全成功
+	}
+
+	errs := make([]error, 0, len(messages))
+	for _, cmd := range cmders {
+		if nil != cmd.Err() {
+			errs = append(errs, cmd.Err())
+		}
+	}
+	return errs
+}
+
 // 从指定topic订阅消息, 底层API, 最好使用Subscribe替代
 func (mr *KRedis) SyncSubscribeLow(callback func(err error, topic string, payload any), topics ...string) {
 	go func() {
