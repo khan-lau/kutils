@@ -207,12 +207,13 @@ func Test_JsonObjLen(t *testing.T) {
 	}
 }
 
-func LogFunc(lvl klogger.Level, f string, args ...any) {
+func LogFunc(lvl klogger.Level, tag string, skipFix int, f string, args ...any) {
 	if nil == klog {
 		klog = klogger.LoggerInstanceOnlyConsole(int8(klogger.DebugLevel))
 		klog.Warrn("Not init logger")
 	}
 	skip := 1
+	skip += skipFix
 
 	switch lvl {
 	case klogger.DebugLevel:

@@ -38,8 +38,18 @@ const (
 	FatalLevel
 )
 
-type AppLogFunc func(lvl Level, f string, args ...any)
-type AppLogFuncWithTag func(lvl Level, tag string, f string, args ...any)
+// type AppLogFunc func(lvl Level, f string, args ...any)
+
+// AppLogFuncWithTag 日志记录, 会自动添加 tag
+//
+// 参数:
+//
+//	@param lvl 日志级别, DebugLevel InfoLevel WarnLevel ErrorLevel DPanicLevel PanicLevel FatalLevel
+//	@param tag 日志标签
+//	@param skipFix 跳过几层调用栈
+//	@param f 日志格式, 支持 fmt.Sprintf 格式
+//	@param args 日志参数
+type AppLogFuncWithTag func(lvl Level, tag string, skipFix int, f string, args ...any)
 
 func (l Level) String() string {
 	switch l {

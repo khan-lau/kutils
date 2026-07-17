@@ -628,7 +628,7 @@ func (that *KRedisCluster) Ping() bool {
 	return nil == err
 }
 
-func (that *KRedisCluster) ScanMatch(limit int, aboutTypes []string, ignoreKeys []string, includeKeys []string, needDel bool, logf klogger.AppLogFunc) ([]*RedisRecord, error) {
+func (that *KRedisCluster) ScanMatch(limit int, aboutTypes []string, ignoreKeys []string, includeKeys []string, needDel bool, logf klogger.AppLogFuncWithTag) ([]*RedisRecord, error) {
 	cursor := uint64(0)
 	allKeys := make([]string, 0, 50000)
 
@@ -696,7 +696,7 @@ func (that *KRedisCluster) ScanMatch(limit int, aboutTypes []string, ignoreKeys 
 	return dataList, nil
 }
 
-func (that *KRedisCluster) Scan(limit int, aboutTypes []string, ignoreKeys []string, includeKeys []string, needDel bool, logf klogger.AppLogFunc) ([]*RedisRecord, error) {
+func (that *KRedisCluster) Scan(limit int, aboutTypes []string, ignoreKeys []string, includeKeys []string, needDel bool, logf klogger.AppLogFuncWithTag) ([]*RedisRecord, error) {
 	cursor := uint64(0)
 	allKeys := make([]string, 0, 50000)
 
