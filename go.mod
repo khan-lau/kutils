@@ -1,10 +1,10 @@
 module github.com/khan-lau/kutils
 
-go 1.24.0 
+go 1.24.0
 
 require (
 	github.com/andybalholm/brotli v1.1.0
-	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
+	github.com/khan-lau/file-rotatelogs v0.1.0
 	github.com/redis/go-redis/v9 v9.3.0
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.48.0

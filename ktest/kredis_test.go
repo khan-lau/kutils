@@ -8,16 +8,16 @@ import (
 
 	"github.com/khan-lau/kutils/container/kcontext"
 	"github.com/khan-lau/kutils/db/kredis"
-	"github.com/khan-lau/kutils/klogger"
+	klog "github.com/khan-lau/kutils/klogger"
 )
 
 var (
 	redisHd *kredis.KRedis
-	klog    *klogger.Logger
+	// glog    *klog.Logger
 )
 
 func init() {
-	klog = nil
+	// glog = nil
 	mainRoot := kcontext.NewContextTree("mainCtx").GetRoot()
 	ctx := mainRoot.NewChild("redis_ctx")
 
@@ -207,28 +207,28 @@ func Test_JsonObjLen(t *testing.T) {
 	}
 }
 
-func LogFunc(lvl klogger.Level, tag string, skipFix int, f string, args ...any) {
-	if nil == klog {
-		klog = klogger.LoggerInstanceOnlyConsole(int8(klogger.DebugLevel))
-		klog.Warrn("Not init logger")
+func LogFunc(lvl klog.Level, tag string, skipFix int, f string, args ...any) {
+	if nil == glog {
+		glog = klog.LoggerInstanceOnlyConsole(int8(klog.DebugLevel))
+		glog.Warrn("Not init logger")
 	}
 	skip := 1
 	skip += skipFix
 
 	switch lvl {
-	case klogger.DebugLevel:
-		klog.KDebug(skip, f, args...)
-	case klogger.InfoLevel:
-		klog.KInfo(skip, f, args...)
-	case klogger.WarnLevel:
-		klog.KWarrn(skip, f, args...)
-	case klogger.ErrorLevel:
-		klog.KError(skip, f, args...)
-	case klogger.DPanicLevel:
-		klog.KDPanic(skip, f, args...)
-	case klogger.FatalLevel:
-		klog.KFatal(skip, f, args...)
+	case klog.DebugLevel:
+		glog.KDebug(skip, f, args...)
+	case klog.InfoLevel:
+		glog.KInfo(skip, f, args...)
+	case klog.WarnLevel:
+		glog.KWarrn(skip, f, args...)
+	case klog.ErrorLevel:
+		glog.KError(skip, f, args...)
+	case klog.DPanicLevel:
+		glog.KDPanic(skip, f, args...)
+	case klog.FatalLevel:
+		glog.KFatal(skip, f, args...)
 	default:
-		klog.KInfo(skip, lvl.String()+": "+f, args)
+		glog.KInfo(skip, lvl.String()+": "+f, args)
 	}
 }

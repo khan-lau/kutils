@@ -36,8 +36,9 @@ type LoggerConfigure struct {
 	Async         bool   `json:"async"`    // 是否异步输出日志, 默认同步输出
 	flushInterval int64  // 强制刷盘周期, 单位 毫秒
 	bufferSize    int64  // 缓冲区大小, 单位 Byte
-	MaxAge        int    `json:"maxAge"`       // 日志最长保留时间, 单位 小时
+	MaxAge        int    `json:"maxAge"`       // 日志最长保留时间, 单位 小时, MaxAge 与 MaxCount 必须只能设置一个
 	MaxSize       int64  `json:"maxSize"`      // 单文件最大滚动大小, 单位 byte, 超过后强制滚动
+	MaxCount      uint   `json:"maxCount"`     // 最多保留的备份文件数量, 默认50个, MaxAge 与 MaxCount 必须只能设置一个
 	RotationTime  int    `json:"rotationTime"` // 日志滚动周期, 单位 小时, 24小时滚动一个文件
 	ToConsole     bool   `json:"console"`      // 是否输出到控制台
 	LogFile       string `json:"logFile"`      // 输出到文件, 如果文件名为空, 则不输出到文件
@@ -48,16 +49,23 @@ func NewConfigure() *LoggerConfigure {
 		Level:        0,
 		Colorful:     false,
 		Async:        false,
-		MaxAge:       720,
+		MaxAge:       720,                     // 日志最长保留时间, 单位 小时
+		MaxCount:     0,                       // 最多保留的备份文件数量, 默认50个
 		MaxSize:      10 * 1024 * 1024 * 1024, // 默认最大文件大小 10G
-		RotationTime: 24,
-		ToConsole:    false,
+		RotationTime: 24,                      // 日志滚动周期, 单位 小时, 24小时滚动一个文件
+		ToConsole:    false,                   // 是否输出到控制台
 		LogFile:      "",
 	}
 }
 
 func (that *LoggerConfigure) SetLevel(level Level) *LoggerConfigure {
 	that.Level = level
+	return that
+}
+
+// 设置最多保留的备份文件数量, 默认50个, MaxAge 与 MaxCount 必须只能设置一个
+func (that *LoggerConfigure) SetMaxCount(count uint) *LoggerConfigure {
+	that.MaxCount = count
 	return that
 }
 
@@ -73,6 +81,7 @@ func (that *LoggerConfigure) SetAsync(async bool, flushInterval, bufferSize int6
 	return that
 }
 
+// 设置日志最长保留时间, 单位 小时, MaxAge 与 MaxCount 必须只能设置一个
 func (that *LoggerConfigure) SetMaxAge(age int) *LoggerConfigure {
 	that.MaxAge = age
 	return that

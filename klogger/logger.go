@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	rotatelogs "github.com/khan-lau/file-rotatelogs"
 	"github.com/khan-lau/kutils/container/kstrings"
 	"github.com/khan-lau/kutils/datetime"
-	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -118,28 +118,37 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 		file_suffix := path.Ext(filename)                         // 获取文件扩展名
 		filen_prefix := strings.TrimSuffix(filename, file_suffix) // 获取文件名称和路径, 不包含扩展名
 
-		if conf.MaxAge == 0 {
-			conf.MaxAge = 3 * 24 // 默认最长保存3天
+		options := []rotatelogs.Option{}
+		if conf.MaxSize > 0 {
+			// conf.MaxSize = 10 * 1024 * 1024 * 1024 // 单文件最大滚动大小, 单位 byte, 超过后强制滚动, 默认10G
+			options = append(options, rotatelogs.WithRotationSize(conf.MaxSize)) // 单文件最大10G,切割一次
+		} else {
+			// options = append(options, rotatelogs.WithRotationSize(0))
 		}
-		if conf.RotationTime == 0 {
-			conf.RotationTime = 24 // 默认24小时滚动一次
+		if conf.MaxAge > 0 {
+			// conf.MaxAge = 3 * 24 // 默认最长保存3天
+			options = append(options, rotatelogs.WithMaxAge(time.Duration(conf.MaxAge)*time.Hour)) // 最长保存30天
+		} else {
+			// options = append(options, rotatelogs.WithMaxAge(0))
+		}
+		if conf.RotationTime > 0 {
+			// conf.RotationTime = 24 // 默认24小时滚动一次
+			options = append(options, rotatelogs.WithRotationTime(time.Duration(conf.RotationTime)*time.Hour)) // 24小时切割一次
+		} else {
+			// options = append(options, rotatelogs.WithRotationTime(0))
+		}
+		if conf.MaxCount > 0 {
+			options = append(options, rotatelogs.WithRotationCount(conf.MaxCount)) // 最多保存50个备份文件
+		} else {
+			// options = append(options, rotatelogs.WithRotationCount(0))
 		}
 
-		if conf.MaxSize == 0 {
-			conf.MaxSize = 10 * 1024 * 1024 * 1024 // 单文件最大滚动大小, 单位 byte, 超过后强制滚动, 默认10G
-		}
-
-		logFilePattern := filen_prefix + ".%Y%m%d%H%M" + file_suffix
-		options := []rotatelogs.Option{
-			rotatelogs.WithRotationTime(time.Duration(conf.RotationTime) * time.Hour), // 24小时切割一次
-			rotatelogs.WithRotationSize(conf.MaxSize),                                 // 单文件最大10G,切割一次
-			rotatelogs.WithMaxAge(time.Duration(conf.MaxAge) * time.Hour),             // 最长保存30天
-		}
 		// 只有非 Windows 系统（如 Linux/macOS）才开启软链接功能
 		if runtime.GOOS != "windows" {
 			options = append(options, rotatelogs.WithLinkName(filen_prefix+file_suffix)) // 软链接
 		}
 
+		logFilePattern := filen_prefix + ".%Y%m%d%H%M" + file_suffix
 		logFile, _ := rotatelogs.New(logFilePattern, options...)
 
 		// logFile := &lumberjack.Logger{
