@@ -143,6 +143,21 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 			// options = append(options, rotatelogs.WithRotationCount(0))
 		}
 
+		// // 自定义文件老化策略
+		// options = append(options, rotatelogs.WithAgingFunc(func(files []rotatelogs.LogFileInfo) []string {
+		// 	filePaths := make([]string, 0, len(files))
+		// 	for _, file := range files {
+		// 		kstrings.Debugf("ready remove {}\n", file.Path)
+		// 		filePaths = append(filePaths, file.Path)
+		// 	}
+		// 	return filePaths
+		// }))
+
+		// // 自定义文件滚动策略
+		// options = append(options, rotatelogs.WithNamingFunc(func(baseFilename string, generation int) string {
+		// 	return filen_prefix + ".%Y%m%d%H%M" + file_suffix
+		// }))
+
 		// 只有非 Windows 系统（如 Linux/macOS）才开启软链接功能
 		if runtime.GOOS != "windows" {
 			options = append(options, rotatelogs.WithLinkName(filen_prefix+file_suffix)) // 软链接

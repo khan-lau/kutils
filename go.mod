@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/andybalholm/brotli v1.1.0
-	github.com/khan-lau/file-rotatelogs v0.1.0
+	github.com/khan-lau/file-rotatelogs v0.1.3
 	github.com/redis/go-redis/v9 v9.3.0
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.48.0
