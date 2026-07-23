@@ -36,7 +36,7 @@ func NewKRedis(ctx *kcontext.ContextNode, addr string, user string, password str
 	client := redisHd.NewClient(&redisHd.Options{
 		Addr:            addr,
 		Username:        user,     // redis 6.0以上版本
-		Password:        password, // 没有密码，默认值
+		Password:        password, // 没有密码, 默认值
 		DB:              dbNum,    // 默认DB 0
 		MaxRetries:      3,        // 自动重连3次, 失败后报错
 		DialTimeout:     10 * time.Second,
@@ -238,7 +238,7 @@ func (that *KRedis) RPop(key string) (string, error) {
 	return that.Client.RPop(that.ctx.Context(), key).Result()
 }
 
-// 返回列表的一个范围内的数据，也可以返回全部数据
+// 返回列表的一个范围内的数据, 也可以返回全部数据
 func (that *KRedis) LRange(key string, start int64, stop int64) ([]string, error) {
 	return that.Client.LRange(that.ctx.Context(), key, start, stop).Result()
 }
@@ -261,12 +261,12 @@ func (that *KRedis) LRem(key string, count int64, value any) (int64, error) {
 	return that.Client.LRem(that.ctx.Context(), key, count, value).Result()
 }
 
-// 根据索引坐标，查询列表中的数据
+// 根据索引坐标, 查询列表中的数据
 func (that *KRedis) LIndex(key string, index int64) (string, error) {
 	return that.Client.LIndex(that.ctx.Context(), key, index).Result()
 }
 
-// 在指定位置插入数据，在头部插入用"before"，尾部插入用"after"
+// 在指定位置插入数据, 在头部插入用"before", 尾部插入用"after"
 func (that *KRedis) LInsert(key string, position string, pivot any, value any) (int64, error) {
 	return that.Client.LInsert(that.ctx.Context(), key, position, pivot, value).Result()
 }
@@ -358,11 +358,11 @@ func (that *KRedis) ExpireAt(key string, tm time.Time) bool {
 	return that.Client.ExpireAt(that.ctx.Context(), key, tm).Val()
 }
 
-// JsonGet 封装了 Redis JSON.GET 命令，并直接返回原始的 JSON 字符串。
-// 调用方将负责对返回的字符串进行反序列化。
-// key: Redis 中的键名。
-// paths: 可选的 JSON Path 参数。如果没有提供，则获取整个 JSON 文档。
-// 返回值：JSON 字符串。如果键或路径不存在，或结果为空，则返回空字符串和 nil 错误。
+// JsonGet 封装了 Redis JSON.GET 命令, 并直接返回原始的 JSON 字符串.
+// 调用方将负责对返回的字符串进行反序列化.
+// key: Redis 中的键名.
+// paths: 可选的 JSON Path 参数.如果没有提供, 则获取整个 JSON 文档.
+// 返回值：JSON 字符串.如果键或路径不存在, 或结果为空, 则返回空字符串和 nil 错误.
 func (that *KRedis) JsonGet(key string, paths ...string) (string, error) {
 	args := make([]any, 0, 2+len(paths))
 	args = append(args, "JSON.GET", key)
@@ -373,9 +373,9 @@ func (that *KRedis) JsonGet(key string, paths ...string) (string, error) {
 	cmd := that.Client.Do(that.ctx.Context(), args...)
 	// 检查 Redis 命令执行是否出错
 	if err := cmd.Err(); err != nil {
-		// 如果错误是 redis.Nil (表示键或路径不存在)，则返回空字符串和 nil 错误
+		// 如果错误是 redis.Nil (表示键或路径不存在), 则返回空字符串和 nil 错误
 		if err == redisHd.Nil {
-			return "", nil // 数据未找到，非致命错误，返回空字符串
+			return "", nil // 数据未找到, 非致命错误, 返回空字符串
 		}
 		// 其他错误则包装并返回
 		return "", err
@@ -391,31 +391,31 @@ func (that *KRedis) JsonGet(key string, paths ...string) (string, error) {
 	return jsonString, nil // 返回 JSON 字符串和 nil 错误
 }
 
-// JsonSet 封装了 Redis JSON.SET 命令。
-// 它会将 Go 值自动序列化为 JSON 字符串并存储。
-// key: Redis 中的键名。
-// path: JSON Path。
-// value: 要存储的 Go 值，将被序列化为 JSON。
-// 返回值：如果操作成功则返回 nil，否则返回错误。
+// JsonSet 封装了 Redis JSON.SET 命令.
+// 它会将 Go 值自动序列化为 JSON 字符串并存储.
+// key: Redis 中的键名.
+// path: JSON Path.
+// value: 要存储的 Go 值, 将被序列化为 JSON.
+// 返回值：如果操作成功则返回 nil, 否则返回错误.
 func (that *KRedis) JsonSet(key string, path string, value string) error {
 	// 构建 Redis 命令参数：JSON.SET key path jsonValueString
-	// `string(jsonValue)` 将字节切片转换为字符串，go-redis 可以接受
+	// `string(jsonValue)` 将字节切片转换为字符串, go-redis 可以接受
 	cmd := that.Client.Do(that.ctx.Context(), "JSON.SET", key, path, value)
 
 	// 检查 Redis 命令执行是否出错
 	if err := cmd.Err(); err != nil {
 		return err
 	}
-	// JSON.SET 通常返回 "OK" 或 nil，这里我们只关心错误
+	// JSON.SET 通常返回 "OK" 或 nil, 这里我们只关心错误
 	return nil
 }
 
-// JsonMerge 封装了 Redis JSON.MERGE 命令。
-// 该命令会将 Go 值序列化为 JSON 并与现有值合并。如果路径不存在，则创建新字段。
-// key: Redis 中的键名。
-// path: JSON Path，指定要合并的位置。
-// value: 要存储的 Go 值，将被序列化为 JSON 并与现有值合并。
-// 返回值：如果操作成功则返回 nil，否则返回错误。
+// JsonMerge 封装了 Redis JSON.MERGE 命令.
+// 该命令会将 Go 值序列化为 JSON 并与现有值合并.如果路径不存在, 则创建新字段.
+// key: Redis 中的键名.
+// path: JSON Path, 指定要合并的位置.
+// value: 要存储的 Go 值, 将被序列化为 JSON 并与现有值合并.
+// 返回值：如果操作成功则返回 nil, 否则返回错误.
 func (that *KRedis) JsonMerge(key string, path string, value string) error {
 	cmd := that.Client.Do(that.ctx.Context(), "JSON.MERGE", key, path, value)
 	if err := cmd.Err(); err != nil {
@@ -424,15 +424,15 @@ func (that *KRedis) JsonMerge(key string, path string, value string) error {
 	return nil
 }
 
-// JsonDel 封装了 Redis JSON.DEL 命令。
-// key: Redis 中的键名。
-// path: 可选的 JSON Path。如果为空字符串，则删除整个 JSON 文档。
-// 返回值：被删除的 JSON 值数量。如果键或路径不存在，通常返回 0。
+// JsonDel 封装了 Redis JSON.DEL 命令.
+// key: Redis 中的键名.
+// path: 可选的 JSON Path.如果为空字符串, 则删除整个 JSON 文档.
+// 返回值：被删除的 JSON 值数量.如果键或路径不存在, 通常返回 0.
 func (that *KRedis) JsonDel(key string, path string) (int64, error) {
 	// 构建 Redis 命令参数
 	args := make([]any, 0, 3)
 	args = append(args, "JSON.DEL", key)
-	if path != "" { // 如果 path 不为空，则添加到参数中
+	if path != "" { // 如果 path 不为空, 则添加到参数中
 		args = append(args, path)
 	}
 
@@ -441,11 +441,11 @@ func (that *KRedis) JsonDel(key string, path string) (int64, error) {
 	// 检查 Redis 命令执行是否出错
 	if err := cmd.Err(); err != nil {
 		// JSON.DEL 在键或路径不存在时通常返回 0 而不是 redis.Nil
-		// 所以如果这里有错误，通常是更底层的问题
+		// 所以如果这里有错误, 通常是更底层的问题
 		return 0, err
 	}
 
-	// JSON.DEL 返回被删除的路径数量，这是一个整数
+	// JSON.DEL 返回被删除的路径数量, 这是一个整数
 	result, err := cmd.Int64()
 	if err != nil {
 		return 0, err
@@ -453,14 +453,14 @@ func (that *KRedis) JsonDel(key string, path string) (int64, error) {
 	return result, nil
 }
 
-// JsonType 封装了 Redis JSON.TYPE 命令。
-// key: Redis 中的键名。
-// path: 可选的 JSON Path。如果为空字符串，则返回根路径的类型; 不支持同时指定多个路径。
-// 返回值：一个包含 JSON 值类型的字符串切片。如果键或路径不存在，则返回 nil 切片和 nil 错误。
+// JsonType 封装了 Redis JSON.TYPE 命令.
+// key: Redis 中的键名.
+// path: 可选的 JSON Path.如果为空字符串, 则返回根路径的类型; 不支持同时指定多个路径.
+// 返回值：一个包含 JSON 值类型的字符串切片.如果键或路径不存在, 则返回 nil 切片和 nil 错误.
 func (that *KRedis) JsonType(key string, path string) ([]string, error) {
 	args := make([]any, 0, 3)
 	args = append(args, "JSON.TYPE", key)
-	if path != "" { // 如果 path 不为空，则添加到参数中
+	if path != "" { // 如果 path 不为空, 则添加到参数中
 		args = append(args, path)
 	}
 
@@ -468,7 +468,7 @@ func (that *KRedis) JsonType(key string, path string) ([]string, error) {
 
 	if err := cmd.Err(); err != nil {
 		if err == redisHd.Nil {
-			return nil, nil // 键或路径不存在，返回 nil 切片和 nil 错误
+			return nil, nil // 键或路径不存在, 返回 nil 切片和 nil 错误
 		}
 		return nil, err
 	}
@@ -476,7 +476,7 @@ func (that *KRedis) JsonType(key string, path string) ([]string, error) {
 	str, err := cmd.Text()
 	fmt.Printf("%s, %v\n", str, err)
 
-	// JSON.TYPE 返回一个字符串数组（即使只有一个结果），例如 `["string"]`
+	// JSON.TYPE 返回一个字符串数组（即使只有一个结果）, 例如 `["string"]`
 	types, err := cmd.Slice()
 	if err != nil {
 		return nil, err
@@ -484,9 +484,9 @@ func (that *KRedis) JsonType(key string, path string) ([]string, error) {
 	stringTypes := make([]string, 0, len(types))
 	for _, v := range types {
 		switch val := v.(type) { // 使用类型断言和 switch 语句来处理不同类型的值
-		case string: // 如果 v 是字符串类型，直接赋值
+		case string: // 如果 v 是字符串类型, 直接赋值
 			stringTypes = append(stringTypes, val) // 直接将字符串值追加到切片中
-		case []byte: // 如果 v 是字节切片类型，转换为字符串
+		case []byte: // 如果 v 是字节切片类型, 转换为字符串
 			stringTypes = append(stringTypes, string(val)) // 将字节切片转换为字符串后追加到切片中
 		case []string:
 			stringTypes = append(stringTypes, val...) // 直接将每个元素追加到结果切片中
@@ -494,24 +494,24 @@ func (that *KRedis) JsonType(key string, path string) ([]string, error) {
 			for _, iv := range val { // 遍历 []any 中的每个元素
 				stringTypes = append(stringTypes, iv.(string)) // 断言为 string 并追加到结果切片中
 			}
-		case nil: // 如果 v 是 nil，则忽略它（通常不会发生）
+		case nil: // 如果 v 是 nil, 则忽略它（通常不会发生）
 			continue
 		default:
-			return nil, fmt.Errorf("unexpected type: %v", val) // 如果不是预期的类型（这里是 string 或 []byte），则返回错误
+			return nil, fmt.Errorf("unexpected type: %v", val) // 如果不是预期的类型（这里是 string 或 []byte）, 则返回错误
 		}
 		// stringTypes[i] = v.(string) // 确保切片中的元素类型为 string
 	}
 	return stringTypes, nil
 }
 
-// JsonObjKeys 封装了 Redis JSON.OBJKEYS 命令。
-// key: Redis 中的键名。
-// path: 可选的 JSON Path。如果为空字符串，则返回根对象的键。
-// 返回值：一个包含对象键的字符串切片。如果键、路径不存在或路径对应的不是对象，则返回 nil 切片和 nil 错误。
+// JsonObjKeys 封装了 Redis JSON.OBJKEYS 命令.
+// key: Redis 中的键名.
+// path: 可选的 JSON Path.如果为空字符串, 则返回根对象的键.
+// 返回值：一个包含对象键的字符串切片.如果键、路径不存在或路径对应的不是对象, 则返回 nil 切片和 nil 错误.
 func (that *KRedis) JsonObjKeys(key string, path string) ([]string, error) {
 	args := make([]any, 0, 3)
 	args = append(args, "JSON.OBJKEYS", key)
-	if path != "" { // 如果 path 不为空，则添加到参数中
+	if path != "" { // 如果 path 不为空, 则添加到参数中
 		args = append(args, path)
 	}
 
@@ -519,7 +519,7 @@ func (that *KRedis) JsonObjKeys(key string, path string) ([]string, error) {
 
 	if err := cmd.Err(); err != nil {
 		if err == redisHd.Nil {
-			return nil, nil // 键或路径不存在，返回 nil 切片和 nil 错误
+			return nil, nil // 键或路径不存在, 返回 nil 切片和 nil 错误
 		}
 		return nil, err
 	}
@@ -527,33 +527,33 @@ func (that *KRedis) JsonObjKeys(key string, path string) ([]string, error) {
 	// JSON.OBJKEYS 返回一个字符串数组（对象的键）
 	keys, err := cmd.StringSlice()
 	if err != nil {
-		// ***** 关键修正：这里声明 redisErr 为接口类型本身，而不是指向接口的指针 *****
+		// ***** 关键修正：这里声明 redisErr 为接口类型本身, 而不是指向接口的指针 *****
 		var redisErr redisHd.Error // 声明一个 redisHd.Error 接口类型的变量
 
-		// errors.As 会尝试将 err 转换为 redisHd.Error 接口类型，并赋值给 redisErr
+		// errors.As 会尝试将 err 转换为 redisHd.Error 接口类型, 并赋值给 redisErr
 		if errors.As(err, &redisErr) { // 传递 redisErr 变量的地址
-			// 现在 redisErr 是一个 redisHd.Error 接口类型的值，
-			// 你可以安全地调用它的方法，包括继承自 error 接口的 Error() 方法
+			// 现在 redisErr 是一个 redisHd.Error 接口类型的值,
+			// 你可以安全地调用它的方法, 包括继承自 error 接口的 Error() 方法
 			if redisErr.Error() == "ERR wrong type" {
-				return nil, nil // 针对“ERR wrong type”错误，返回 nil 切片和 nil 错误
+				return nil, nil // 针对“ERR wrong type”错误, 返回 nil 切片和 nil 错误
 			}
-			// 你也可以调用自定义的 RedisError() 方法，如果需要的话
+			// 你也可以调用自定义的 RedisError() 方法, 如果需要的话
 			// redisErr.RedisError()
 		}
-		// 如果 err 不是 redisHd.Error 接口类型，或者 errors.As 失败，则返回原始错误
+		// 如果 err 不是 redisHd.Error 接口类型, 或者 errors.As 失败, 则返回原始错误
 		return nil, err
 	}
 	return keys, nil
 }
 
-// OBJLEN 获取JSON 对象中键的数量，如果匹配的 JSON 值不是对象，则为 -1
-// key: Redis 中的键名。
-// path: 可选的 JSON Path。如果为空字符串，则返回根对象的键。
-// 返回值：一个包含对象键的字符串切片。如果键、路径不存在或路径对应的不是对象，则返回 nil 切片和 nil 错误。
+// OBJLEN 获取JSON 对象中键的数量, 如果匹配的 JSON 值不是对象, 则为 -1
+// key: Redis 中的键名.
+// path: 可选的 JSON Path.如果为空字符串, 则返回根对象的键.
+// 返回值：一个包含对象键的字符串切片.如果键、路径不存在或路径对应的不是对象, 则返回 nil 切片和 nil 错误.
 func (that *KRedis) JsonObjLen(key string, path string) ([]int64, error) {
 	args := make([]any, 0, 3)
 	args = append(args, "JSON.OBJLEN", key)
-	if path != "" { // 如果 path 不为空，则添加到参数中
+	if path != "" { // 如果 path 不为空, 则添加到参数中
 		args = append(args, path)
 	}
 
@@ -903,7 +903,14 @@ func (mr *KRedis) PSubscribeLow(callback func(err error, topic string, payload a
 	callback(ErrUnSubscribe, "", nil)
 }
 
-// 从指定topic订阅消息
+// SyncSubscribeWithoutTimeout 从指定topic订阅消息（使用 pubsub.Channel）, 无超时机制.
+//
+// 注意：go-redis PubSub 内部有自动重连机制, Channel() 静默处理错误,
+// 连接断开后可自行恢复.但错误被内部消化, 不会触发本层的 error callback,
+// 导致外层的 reconnectLoop 和 onError 无法感知断连事件.
+// 如需错误对外可见以配合外部重连逻辑, 请改用 SyncSubscribeReceive.
+//
+// callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) SyncSubscribeWithoutTimeout(callback func(err error, topic string, payload any), topics ...string) {
 	pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
 	ch := pubsub.Channel(redisHd.WithChannelSize(100), redisHd.WithChannelHealthCheckInterval(time.Second*30))
@@ -923,7 +930,7 @@ forEnd: //这个标签
 	}
 
 	pubsub.Close()
-	// 此时 ch 已经被 close 了，range 会处理完 Buffer 里的数据后自动退出
+	// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 	for msg := range ch {
 		callback(nil, msg.Channel, msg.Payload)
 	}
@@ -932,7 +939,14 @@ END:
 	callback(ErrUnSubscribe, "", nil)
 }
 
-// 从指定topic订阅消息
+// SubscribeWithoutTimeout 从指定topic订阅消息（使用 pubsub.Channel）, 无超时机制, 异步版本.
+//
+// 注意：go-redis PubSub 内部有自动重连机制, Channel() 静默处理错误,
+// 连接断开后可自行恢复.但错误被内部消化, 不会触发本层的 error callback,
+// 导致外层的 reconnectLoop 和 onError 无法感知断连事件.
+// 如需错误对外可见以配合外部重连逻辑, 请改用 SubscribeReceive.
+//
+// callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) SubscribeWithoutTimeout(callback func(err error, topic string, payload any), topics ...string) {
 	go func() {
 		pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
@@ -953,7 +967,7 @@ func (mr *KRedis) SubscribeWithoutTimeout(callback func(err error, topic string,
 		}
 
 		pubsub.Close()
-		// 此时 ch 已经被 close 了，range 会处理完 Buffer 里的数据后自动退出
+		// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 		for msg := range ch {
 			callback(nil, msg.Channel, msg.Payload)
 		}
@@ -963,7 +977,14 @@ func (mr *KRedis) SubscribeWithoutTimeout(callback func(err error, topic string,
 	}()
 }
 
-// 从指定topic订阅消息, timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
+// SyncSubscribe 从指定topic订阅消息（使用 pubsub.Channel）.
+//
+// 注意：go-redis PubSub 内部有自动重连机制, Channel() 静默处理错误,
+// 连接断开后可自行恢复.但错误被内部消化, 不会触发本层的 error callback,
+// 导致外层的 reconnectLoop 和 onError 无法感知断连事件.
+// 如需错误对外可见以配合外部重连逻辑, 请改用 SyncSubscribeReceive.
+//
+// timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) SyncSubscribe(timeout int, callback func(err error, topic string, payload any), topics ...string) {
 	pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
 	// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
@@ -978,7 +999,7 @@ forEnd: //这个标签
 			} else {
 				callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
 			}
-		case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞，那么select也会检测其他case条件，检测到后timeout指定毫秒超时
+		case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞, 那么select也会检测其他case条件, 检测到后timeout指定毫秒超时
 			continue
 		case <-mr.ctx.Context().Done():
 			break forEnd
@@ -986,7 +1007,7 @@ forEnd: //这个标签
 	}
 
 	pubsub.Close()
-	// 此时 ch 已经被 close 了，range 会处理完 Buffer 里的数据后自动退出
+	// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 	for msg := range ch {
 		callback(nil, msg.Channel, msg.Payload)
 	}
@@ -995,7 +1016,14 @@ END:
 	callback(ErrUnSubscribe, "", nil)
 }
 
-// 从指定topic订阅消息, timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
+// Subscribe 从指定topic订阅消息（使用 pubsub.Channel）, 异步版本.
+//
+// 注意：go-redis PubSub 内部有自动重连机制, Channel() 静默处理错误,
+// 连接断开后可自行恢复.但错误被内部消化, 不会触发本层的 error callback,
+// 导致外层的 reconnectLoop 和 onError 无法感知断连事件.
+// 如需错误对外可见以配合外部重连逻辑, 请改用 SubscribeReceive.
+//
+// timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) Subscribe(timeout int, callback func(err error, topic string, payload any), topics ...string) {
 	go func() {
 		pubsub := mr.Client.Subscribe(mr.ctx.Context(), topics...)
@@ -1011,7 +1039,7 @@ func (mr *KRedis) Subscribe(timeout int, callback func(err error, topic string, 
 				} else {
 					go callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
 				}
-			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞，那么select也会检测其他case条件，检测到后timeout指定毫秒超时
+			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞, 那么select也会检测其他case条件, 检测到后timeout指定毫秒超时
 				continue
 			case <-mr.ctx.Context().Done():
 				break forEnd
@@ -1019,7 +1047,7 @@ func (mr *KRedis) Subscribe(timeout int, callback func(err error, topic string, 
 		}
 
 		pubsub.Close()
-		// 此时 ch 已经被 close 了，range 会处理完 Buffer 里的数据后自动退出
+		// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 		for msg := range ch {
 			callback(nil, msg.Channel, msg.Payload)
 		}
@@ -1029,7 +1057,14 @@ func (mr *KRedis) Subscribe(timeout int, callback func(err error, topic string, 
 	}()
 }
 
-// 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; chanSize 最大允许队列大小, 如果< 1, 则为1; callback为接收消息的回调函数; topics为需要订阅的topic
+// SyncPSubscribeWithChanSize 从指定topic订阅消息（使用 pubsub.Channel）, topic支持通配符.
+//
+// 注意：go-redis PubSub 内部有自动重连机制, Channel() 静默处理错误,
+// 连接断开后可自行恢复.但错误被内部消化, 不会触发本层的 error callback,
+// 导致外层的 reconnectLoop 和 onError 无法感知断连事件.
+// 如需错误对外可见以配合外部重连逻辑, 请改用 SyncPSubscribeReceive.
+//
+// timeout 设置轮询超时时间, 单位ms; chanSize 最大允许队列大小, 如果< 1, 则为1; callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) SyncPSubscribeWithChanSize(timeout int, chanSize int, callback func(err error, topic string, payload any), topics ...string) {
 	pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
 	// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
@@ -1047,7 +1082,7 @@ forEnd: //这个标签
 			} else {
 				callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
 			}
-		case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞，那么select也会检测其他case条件，检测到后timeout指定毫秒超时
+		case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞, 那么select也会检测其他case条件, 检测到后timeout指定毫秒超时
 			continue
 		case <-mr.ctx.Context().Done():
 			break forEnd
@@ -1055,7 +1090,7 @@ forEnd: //这个标签
 	}
 
 	pubsub.Close()
-	// 此时 ch 已经被 close 了，range 会处理完 Buffer 里的数据后自动退出
+	// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 	for msg := range ch {
 		callback(nil, msg.Channel, msg.Payload)
 	}
@@ -1064,7 +1099,40 @@ END:
 	callback(ErrUnSubscribe, "", nil)
 }
 
-// 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; chanSize 最大允许队列大小, 如果< 1, 则为1; callback为接收消息的回调函数; topics为需要订阅的topic
+// SyncPSubscribeReceive 使用 ReceiveMessage 从指定 topic 订阅消息（topic支持通配符）.
+//
+// 与 SyncPSubscribeWithChanSize 不同：Channel() 内部有自动重连机制, 但错误被内部消化；
+// ReceiveMessage 将错误暴露给调用方, 让外层 reconnectLoop 能感知断连并触发重连.
+func (mr *KRedis) SyncPSubscribeReceive(callback func(err error, topic string, payload any), topics ...string) {
+	ctx := mr.ctx.Context()
+	pubsub := mr.Client.PSubscribe(ctx, topics...)
+	defer pubsub.Close()
+
+	for {
+		message, err := pubsub.ReceiveMessage(ctx)
+		if err != nil {
+			callback(err, "", nil)
+
+			select {
+			case <-ctx.Done():
+				callback(ErrUnSubscribe, "", nil)
+				return
+			default:
+				return
+			}
+		}
+		callback(nil, message.Channel, message.Payload)
+	}
+}
+
+// PSubscribeWithChanSize 从指定topic订阅消息（使用 pubsub.Channel）, topic支持通配符, 异步版本.
+//
+// 注意：go-redis PubSub 内部有自动重连机制, Channel() 静默处理错误,
+// 连接断开后可自行恢复.但错误被内部消化, 不会触发本层的 error callback,
+// 导致外层的 reconnectLoop 和 onError 无法感知断连事件.
+// 如需错误对外可见以配合外部重连逻辑, 请改用 PSubscribeReceive.
+//
+// timeout 设置轮询超时时间, 单位ms; chanSize 最大允许队列大小, 如果< 1, 则为1; callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback func(err error, topic string, payload any), topics ...string) {
 	go func() {
 		pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
@@ -1083,7 +1151,7 @@ func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback fun
 				} else {
 					go callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
 				}
-			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞，那么select也会检测其他case条件，检测到后timeout指定毫秒超时
+			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞, 那么select也会检测其他case条件, 检测到后timeout指定毫秒超时
 				continue
 			case <-mr.ctx.Context().Done():
 				break forEnd
@@ -1091,7 +1159,7 @@ func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback fun
 		}
 
 		pubsub.Close()
-		// 此时 ch 已经被 close 了，range 会处理完 Buffer 里的数据后自动退出
+		// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 		for msg := range ch {
 			callback(nil, msg.Channel, msg.Payload)
 		}
@@ -1101,7 +1169,52 @@ func (mr *KRedis) PSubscribeWithChanSize(timeout int, chanSize int, callback fun
 	}()
 }
 
-// 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
+// PSubscribeReceive 异步版本 SyncPSubscribeReceive, 使用 ReceiveMessage 从指定 topic 订阅消息.
+// 连接断开时返回错误并退出, 适用于需要用户自行实现自动重连的场景.
+func (mr *KRedis) PSubscribeReceive(callback func(err error, topic string, payload any), topics ...string) {
+	go mr.SyncPSubscribeReceive(callback, topics...)
+}
+
+// SyncSubscribeReceive 使用 ReceiveMessage 从指定 topic 订阅消息.
+//
+// 与 SyncSubscribe 不同：Channel() 内部有自动重连机制, 但错误被内部消化；
+// ReceiveMessage 将错误暴露给调用方, 让外层 reconnectLoop 能感知断连并触发重连.
+func (mr *KRedis) SyncSubscribeReceive(callback func(err error, topic string, payload any), topics ...string) {
+	ctx := mr.ctx.Context()
+	pubsub := mr.Client.Subscribe(ctx, topics...)
+	defer pubsub.Close()
+
+	for {
+		message, err := pubsub.ReceiveMessage(ctx)
+		if err != nil {
+			callback(err, "", nil)
+
+			select {
+			case <-ctx.Done():
+				callback(ErrUnSubscribe, "", nil)
+				return
+			default:
+				return
+			}
+		}
+		callback(nil, message.Channel, message.Payload)
+	}
+}
+
+// SubscribeReceive 异步版本 SyncSubscribeReceive, 使用 ReceiveMessage 从指定 topic 订阅消息.
+// 连接断开时返回错误并退出, 适用于需要用户自行实现自动重连的场景.
+func (mr *KRedis) SubscribeReceive(callback func(err error, topic string, payload any), topics ...string) {
+	go mr.SyncSubscribeReceive(callback, topics...)
+}
+
+// SyncPSubscribe 从指定topic订阅消息（使用 pubsub.Channel）, topic支持通配符.
+//
+// 注意：go-redis PubSub 内部有自动重连机制, Channel() 静默处理错误,
+// 连接断开后可自行恢复.但错误被内部消化, 不会触发本层的 error callback,
+// 导致外层的 reconnectLoop 和 onError 无法感知断连事件.
+// 如需错误对外可见以配合外部重连逻辑, 请改用 SyncPSubscribeReceive.
+//
+// timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) SyncPSubscribe(timeout int, callback func(err error, topic string, payload any), topics ...string) {
 	pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
 	// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
@@ -1116,7 +1229,7 @@ forEnd: //这个标签
 			} else {
 				callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
 			}
-		case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞，那么select也会检测其他case条件，检测到后timeout指定毫秒超时
+		case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞, 那么select也会检测其他case条件, 检测到后timeout指定毫秒超时
 			continue
 		case <-mr.ctx.Context().Done():
 			break forEnd
@@ -1124,7 +1237,7 @@ forEnd: //这个标签
 		}
 	}
 	pubsub.Close()
-	// 此时 ch 已经被 close 了，range 会处理完 Buffer 里的数据后自动退出
+	// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 	for msg := range ch {
 		callback(nil, msg.Channel, msg.Payload)
 	}
@@ -1134,7 +1247,14 @@ END:
 
 }
 
-// 从指定topic订阅消息, topic支持通配符, timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
+// PSubscribe 从指定topic订阅消息（使用 pubsub.Channel）, topic支持通配符, 异步版本.
+//
+// 注意：go-redis PubSub 内部有自动重连机制, Channel() 静默处理错误,
+// 连接断开后可自行恢复.但错误被内部消化, 不会触发本层的 error callback,
+// 导致外层的 reconnectLoop 和 onError 无法感知断连事件.
+// 如需错误对外可见以配合外部重连逻辑, 请改用 PSubscribeReceive.
+//
+// timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
 func (mr *KRedis) PSubscribe(timeout int, callback func(err error, topic string, payload any), topics ...string) {
 	go func() {
 		pubsub := mr.Client.PSubscribe(mr.ctx.Context(), topics...)
@@ -1150,7 +1270,7 @@ func (mr *KRedis) PSubscribe(timeout int, callback func(err error, topic string,
 				} else {
 					go callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
 				}
-			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞，那么select也会检测其他case条件，检测到后timeout指定毫秒超时
+			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞, 那么select也会检测其他case条件, 检测到后timeout指定毫秒超时
 				continue
 			case <-mr.ctx.Context().Done():
 				break forEnd
@@ -1158,7 +1278,7 @@ func (mr *KRedis) PSubscribe(timeout int, callback func(err error, topic string,
 			}
 		}
 		pubsub.Close()
-		// 此时 ch 已经被 close 了，range 会处理完 Buffer 里的数据后自动退出
+		// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 		for msg := range ch {
 			callback(nil, msg.Channel, msg.Payload)
 		}
