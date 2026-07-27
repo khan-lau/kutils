@@ -1,4 +1,4 @@
-package ktest
+package ktest_test
 
 import (
 	"bytes"
