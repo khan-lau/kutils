@@ -210,7 +210,7 @@ func Test_JsonObjLen(t *testing.T) {
 func LogFunc(lvl klog.Level, tag string, skipFix int, f string, args ...any) {
 	if nil == glog {
 		glog = klog.LoggerInstanceOnlyConsole(int8(klog.DebugLevel))
-		glog.Warrn("Not init logger")
+		glog.Warn("Not init logger")
 	}
 	skip := 1
 	skip += skipFix
@@ -221,7 +221,7 @@ func LogFunc(lvl klog.Level, tag string, skipFix int, f string, args ...any) {
 	case klog.InfoLevel:
 		glog.KInfo(skip, f, args...)
 	case klog.WarnLevel:
-		glog.KWarrn(skip, f, args...)
+		glog.KWarn(skip, f, args...)
 	case klog.ErrorLevel:
 		glog.KError(skip, f, args...)
 	case klog.DPanicLevel:

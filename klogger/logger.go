@@ -232,7 +232,7 @@ func (that *Logger) Info(template string, args ...any) {
 	}
 }
 
-func (that *Logger) Warrn(template string, args ...any) {
+func (that *Logger) Warn(template string, args ...any) {
 	if that != nil {
 		that.log.Sugar().Warnf(template, args...)
 	}
@@ -306,7 +306,7 @@ func (that *Logger) KInfo(skip int, template string, args ...any) {
 	}
 }
 
-func (that *Logger) KWarrn(skip int, template string, args ...any) {
+func (that *Logger) KWarn(skip int, template string, args ...any) {
 	if that != nil {
 		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Warnf(template, args...)
 	}

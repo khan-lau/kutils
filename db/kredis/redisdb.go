@@ -764,7 +764,7 @@ func (mr *KRedis) Publish(topic string, payload any) error {
 }
 
 // 使用pipeline 向指定topic发布多条消息
-func (that *KRedis) PublishArray(messages []*RedisMessage) []error {
+func (that *KRedis) PublishArray(messages []RedisMessage) []error {
 	if len(messages) == 0 {
 		return nil
 	}
@@ -789,7 +789,7 @@ func (that *KRedis) PublishArray(messages []*RedisMessage) []error {
 }
 
 // 使用pipeline 向指定topic发布多条消息
-func (that *KRedis) PublishArrayWithCtx(ctx *kcontext.ContextNode, messages []*RedisMessage) []error {
+func (that *KRedis) PublishArrayWithCtx(ctx *kcontext.ContextNode, messages []RedisMessage) []error {
 	if len(messages) == 0 {
 		return nil
 	}

@@ -774,7 +774,7 @@ func (that *KRedisCluster) Publish(topic string, payload any) error {
 }
 
 // 使用pipeline 向指定topic发布多条消息
-func (that *KRedisCluster) PublishArray(messages []*RedisMessage) []error {
+func (that *KRedisCluster) PublishArray(messages []RedisMessage) []error {
 	if len(messages) == 0 {
 		return nil
 	}
@@ -799,7 +799,7 @@ func (that *KRedisCluster) PublishArray(messages []*RedisMessage) []error {
 }
 
 // 使用pipeline 向指定topic发布多条消息
-func (that *KRedisCluster) PublishArrayWithCtx(ctx *kcontext.ContextNode, messages []*RedisMessage) []error {
+func (that *KRedisCluster) PublishArrayWithCtx(ctx *kcontext.ContextNode, messages []RedisMessage) []error {
 	if len(messages) == 0 {
 		return nil
 	}
