@@ -76,7 +76,7 @@ func TestLog(t *testing.T) {
 	logger.T("fuck trace off\n")
 	logger.D("fuck off")
 	logger.D("{} fuck off", "maybe")
-
+	logger.I("info off")
 	logger.D("")
 
 	logger.D("int8 {} fuck off", int8(8))

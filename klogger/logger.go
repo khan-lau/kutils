@@ -12,8 +12,32 @@ import (
 	"github.com/khan-lau/kutils/datetime"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
 )
+
+// _traceLevel 自定义 zap level，用于标记 Trace 日志，encoder 据此输出 "TRACE" 前缀
+const _traceLevel = zapcore.Level(-3)
+
+// traceEncoder 包装 zapcore.Encoder，在编码时检测 _t 标记字段，改写 level 为 _traceLevel 并移除标记
+type traceEncoder struct {
+	zapcore.Encoder
+}
+
+func (e *traceEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
+	for i, f := range fields {
+		if f.Key == "_t" {
+			entry.Level = _traceLevel
+			fields = append(fields[:i], fields[i+1:]...)
+			break
+		}
+	}
+	return e.Encoder.EncodeEntry(entry, fields)
+}
+
+func (e *traceEncoder) Clone() zapcore.Encoder {
+	return &traceEncoder{Encoder: e.Encoder.Clone()}
+}
 
 type Level int8
 
@@ -100,6 +124,10 @@ func AsyncLoggerInstance(filename string, logLevel int8, needConsole bool, async
 }
 
 func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
+	if conf == nil {
+		conf = NewConfigure()
+	}
+
 	if Level(conf.Level) < TraceLevel || Level(conf.Level) > FatalLevel {
 		conf.Level = InfoLevel
 	}
@@ -108,10 +136,35 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 
 	cfg := zap.NewProductionEncoderConfig()
 	cfg.EncodeTime = zapcore.TimeEncoderOfLayout(datetime.DATETIME_FORMATTER_Mill)
-	if conf.Colorful {
-		cfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
+
+	if conf.Level == TraceLevel {
+		cfg.EncodeLevel = func(l zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+			if l == _traceLevel {
+				// 自定义 _traceLevel 显示为 TRACE（青色）
+				if conf.Colorful {
+					enc.AppendString("\x1b[36mTRACE\x1b[0m")
+				} else {
+					enc.AppendString("TRACE")
+				}
+			} else if l == zapcore.DebugLevel {
+				if conf.Colorful {
+					zapcore.CapitalColorLevelEncoder(l, enc)
+				} else {
+					zapcore.CapitalLevelEncoder(l, enc)
+				}
+			} else if conf.Colorful {
+				zapcore.CapitalColorLevelEncoder(l, enc)
+			} else {
+				zapcore.CapitalLevelEncoder(l, enc)
+			}
+		}
 	} else {
-		cfg.EncodeLevel = zapcore.CapitalLevelEncoder
+		if conf.Colorful {
+			cfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		} else {
+			cfg.EncodeLevel = zapcore.CapitalLevelEncoder
+		}
+
 	}
 
 	tmpLevel := Level(conf.Level)
@@ -120,6 +173,9 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 	}
 
 	encoder := zapcore.NewConsoleEncoder(cfg)
+	if conf.Level == TraceLevel {
+		encoder = &traceEncoder{Encoder: encoder}
+	}
 
 	// var multiSyncer zapcore.WriteSyncer
 	syncers := make([]zapcore.WriteSyncer, 0, 10)
@@ -231,7 +287,7 @@ func (that *Logger) Sync() {
 
 func (that *Logger) Trace(template string, args ...any) {
 	if that != nil && that.level == TraceLevel {
-		that.log.Sugar().Debugf(template, args...)
+		that.log.Sugar().Debugw(kstrings.FormatString(template, args...), "_t", true)
 	}
 }
 
@@ -274,7 +330,7 @@ func (that *Logger) Fatal(template string, args ...any) {
 
 func (that *Logger) T(template string, args ...any) {
 	if that != nil && that.level == TraceLevel {
-		that.log.Sugar().Debugf(kstrings.FormatString(template, args...))
+		that.log.Sugar().Debugw(kstrings.FormatString(template, args...), "_t", true)
 	}
 }
 
@@ -317,7 +373,7 @@ func (that *Logger) F(template string, args ...any) {
 
 func (that *Logger) KTrace(skip int, template string, args ...any) {
 	if that != nil && that.level == TraceLevel {
-		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Debugf(template, args...)
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Debugw(kstrings.FormatString(template, args...), "_t", true)
 	}
 }
 
@@ -361,7 +417,7 @@ func (that *Logger) KFatal(skip int, template string, args ...any) {
 
 func (that *Logger) KT(skip int, template string, args ...any) {
 	if that != nil && that.level == TraceLevel {
-		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Debugf(kstrings.FormatString(template, args...))
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Debugw(kstrings.FormatString(template, args...), "_t", true)
 	}
 }
 
