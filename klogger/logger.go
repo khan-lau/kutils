@@ -18,9 +18,11 @@ import (
 type Level int8
 
 const (
+	// 外部伪造一个 TraceLevel 日志级别, 用于调试时记录详细信息, 不建议在生产环境中使用, 因为会占用较多磁盘空间和 CPU 资源
+	TraceLevel Level = iota - 2
 	// DebugLevel logs are typically voluminous, and are usually disabled in
 	// production.
-	DebugLevel Level = iota - 1
+	DebugLevel
 	// InfoLevel is the default logging priority.
 	InfoLevel
 	// WarnLevel logs are more important than Info, but don't need individual
@@ -53,7 +55,9 @@ type AppLogFuncWithTag func(lvl Level, tag string, skipFix int, f string, args .
 
 func (l Level) String() string {
 	switch l {
-	case -1:
+	case TraceLevel:
+		return "TRACE"
+	case DebugLevel:
 		return "DEBUG"
 	case 0:
 		return "INFO"
@@ -72,7 +76,8 @@ func (l Level) String() string {
 }
 
 type Logger struct {
-	log *zap.Logger
+	level Level
+	log   *zap.Logger
 }
 
 // var log *zap.Logger
@@ -95,7 +100,7 @@ func AsyncLoggerInstance(filename string, logLevel int8, needConsole bool, async
 }
 
 func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
-	if Level(conf.Level) < DebugLevel || Level(conf.Level) > FatalLevel {
+	if Level(conf.Level) < TraceLevel || Level(conf.Level) > FatalLevel {
 		conf.Level = InfoLevel
 	}
 
@@ -107,6 +112,11 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 		cfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	} else {
 		cfg.EncodeLevel = zapcore.CapitalLevelEncoder
+	}
+
+	tmpLevel := Level(conf.Level)
+	if conf.Level == TraceLevel {
+		tmpLevel = DebugLevel
 	}
 
 	encoder := zapcore.NewConsoleEncoder(cfg)
@@ -197,19 +207,18 @@ func GetLoggerWithConfig(conf *LoggerConfigure) *Logger {
 			WS:            multiSyncer,
 			Size:          int(conf.BufferSize()),                                 // 缓冲区大小, 默认4M
 			FlushInterval: time.Duration(conf.FlushInterval()) * time.Millisecond, // 强制刷盘周期, 默认1000ms
-
 		}
 
 		core = zapcore.NewCore(encoder, //NewJSONEncoder
 			bufferedWriter, //
-			zapcore.Level(zapcore.Level(conf.Level)))
+			zapcore.Level(zapcore.Level(tmpLevel)))
 	} else {
-		core = zapcore.NewCore(encoder, multiSyncer, zapcore.Level(zapcore.Level(conf.Level)))
+		core = zapcore.NewCore(encoder, multiSyncer, zapcore.Level(zapcore.Level(tmpLevel)))
 	}
 
 	log := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1)) // AddCaller() 显示文件名与行号; zap.AddCallerSkip(1)打印的文件名与行号在调用栈往外跳一层
 
-	return &Logger{log: log}
+	return &Logger{level: conf.Level, log: log}
 }
 
 func (that *Logger) Sync() {
@@ -219,6 +228,12 @@ func (that *Logger) Sync() {
 }
 
 ///////////////////////////////////////////////////////////////
+
+func (that *Logger) Trace(template string, args ...any) {
+	if that != nil && that.level == TraceLevel {
+		that.log.Sugar().Debugf(template, args...)
+	}
+}
 
 func (that *Logger) Debug(template string, args ...any) {
 	if that != nil {
@@ -257,6 +272,12 @@ func (that *Logger) Fatal(template string, args ...any) {
 
 ///////////////////////////////////////////////////////////////
 
+func (that *Logger) T(template string, args ...any) {
+	if that != nil && that.level == TraceLevel {
+		that.log.Sugar().Debugf(kstrings.FormatString(template, args...))
+	}
+}
+
 func (that *Logger) D(template string, args ...any) {
 	if that != nil {
 		that.log.Sugar().Debugf(kstrings.FormatString(template, args...))
@@ -293,6 +314,12 @@ func (that *Logger) F(template string, args ...any) {
 }
 
 ///////////////////////////////////////////////////////////////
+
+func (that *Logger) KTrace(skip int, template string, args ...any) {
+	if that != nil && that.level == TraceLevel {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Debugf(template, args...)
+	}
+}
 
 func (that *Logger) KDebug(skip int, template string, args ...any) {
 	if that != nil {
@@ -331,6 +358,12 @@ func (that *Logger) KFatal(skip int, template string, args ...any) {
 }
 
 ///////////////////////////////////////////////////////////////
+
+func (that *Logger) KT(skip int, template string, args ...any) {
+	if that != nil && that.level == TraceLevel {
+		that.log.Sugar().WithOptions(zap.AddCallerSkip(skip)).Debugf(kstrings.FormatString(template, args...))
+	}
+}
 
 func (that *Logger) KD(skip int, template string, args ...any) {
 	if that != nil {

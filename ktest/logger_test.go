@@ -23,7 +23,7 @@ var (
 )
 
 func init() {
-	glog = klog.LoggerInstanceOnlyConsole(int8(klog.DebugLevel))
+	glog = klog.LoggerInstanceOnlyConsole(int8(klog.TraceLevel))
 	// glog = logger.LoggerInstance("aa.log", int8(logger.DebugLevel), true, true)
 }
 
@@ -69,8 +69,11 @@ func Test_Param(t *testing.T) {
 }
 
 func TestLog(t *testing.T) {
-	logger := klogger.LoggerInstanceOnlyConsole(-1)
-
+	logger := klogger.LoggerInstanceOnlyConsole(-2)
+	logger.Trace("trace fuck")
+	logger.KTrace(0, "ktrace off")
+	logger.KT(0, "{}", "trace off")
+	logger.T("fuck trace off\n")
 	logger.D("fuck off")
 	logger.D("{} fuck off", "maybe")
 
