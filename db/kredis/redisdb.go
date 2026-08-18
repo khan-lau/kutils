@@ -618,6 +618,12 @@ func (mr *KRedis) Ping() bool {
 	return nil == err
 }
 
+// PingE 探测连接, 返回具体错误信息(定位用)
+func (mr *KRedis) PingE() error {
+	_, err := mr.Client.Ping(mr.ctx.Context()).Result()
+	return err
+}
+
 func (mr *KRedis) ScanMatch(limit int, aboutTypes []string, ignoreKeys []string, includeKeys []string, needDel bool, logf klogger.AppLogFuncWithTag) ([]*RedisRecord, error) {
 	cursor := uint64(0)
 	allKeys := make([]string, 0, 50000)
