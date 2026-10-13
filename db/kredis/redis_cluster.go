@@ -830,7 +830,7 @@ func (that *KRedisCluster) PublishArrayWithCtx(ctx *kcontext.ContextNode, messag
 }
 
 // 从指定topic订阅消息, 底层API, 最好使用Subscribe替代
-func (that *KRedisCluster) SyncSubscribeLow(callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) SyncSubscribeLow(callback RedisMessageRecvFunc, topics ...string) {
 	go func() {
 		pubsub := that.Client.Subscribe(that.ctx.Context(), topics...)
 		defer pubsub.Close()
@@ -838,7 +838,8 @@ func (that *KRedisCluster) SyncSubscribeLow(callback func(err error, topic strin
 	forEnd: //这个标签
 		for {
 			message, err := pubsub.ReceiveMessage(that.ctx.Context())
-			callback(err, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+			now := time.Now().UnixMilli()
+			callback(err, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 
 			select {
 			case <-that.ctx.Context().Done():
@@ -849,11 +850,11 @@ func (that *KRedisCluster) SyncSubscribeLow(callback func(err error, topic strin
 		}
 	}()
 
-	callback(ErrUnSubscribe, "", nil)
+	callback(ErrUnSubscribe, "", 0, nil)
 }
 
 // 从指定topic订阅消息, 底层API, 最好使用Subscribe替代
-func (that *KRedisCluster) SubscribeLow(callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) SubscribeLow(callback RedisMessageRecvFunc, topics ...string) {
 	go func() {
 		pubsub := that.Client.Subscribe(that.ctx.Context(), topics...)
 		defer pubsub.Close()
@@ -861,7 +862,8 @@ func (that *KRedisCluster) SubscribeLow(callback func(err error, topic string, p
 	forEnd: //这个标签
 		for {
 			message, err := pubsub.ReceiveMessage(that.ctx.Context())
-			go callback(err, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+			now := time.Now().UnixMilli()
+			go callback(err, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 
 			select {
 			case <-that.ctx.Context().Done():
@@ -872,18 +874,19 @@ func (that *KRedisCluster) SubscribeLow(callback func(err error, topic string, p
 		}
 	}()
 
-	callback(ErrUnSubscribe, "", nil)
+	callback(ErrUnSubscribe, "", 0, nil)
 }
 
 // 从指定topic订阅消息, 底层API, 最好使用Subscribe替代
-func (that *KRedisCluster) SyncPSubscribeLow(callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) SyncPSubscribeLow(callback RedisMessageRecvFunc, topics ...string) {
 	pubsub := that.Client.PSubscribe(that.ctx.Context(), topics...)
 	defer pubsub.Close()
 
 forEnd: //这个标签
 	for {
 		message, err := pubsub.ReceiveMessage(that.ctx.Context())
-		callback(err, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+		now := time.Now().UnixMilli()
+		callback(err, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 
 		select {
 		case <-that.ctx.Context().Done():
@@ -893,11 +896,11 @@ forEnd: //这个标签
 		}
 	}
 
-	callback(ErrUnSubscribe, "", nil)
+	callback(ErrUnSubscribe, "", 0, nil)
 }
 
 // 从指定topic订阅消息, 底层API, 最好使用Subscribe替代
-func (that *KRedisCluster) PSubscribeLow(callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) PSubscribeLow(callback RedisMessageRecvFunc, topics ...string) {
 	go func() {
 		pubsub := that.Client.PSubscribe(that.ctx.Context(), topics...)
 		defer pubsub.Close()
@@ -905,7 +908,8 @@ func (that *KRedisCluster) PSubscribeLow(callback func(err error, topic string, 
 	forEnd: //这个标签
 		for {
 			message, err := pubsub.ReceiveMessage(that.ctx.Context())
-			go callback(err, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+			now := time.Now().UnixMilli()
+			go callback(err, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 
 			select {
 			case <-that.ctx.Context().Done():
@@ -916,7 +920,7 @@ func (that *KRedisCluster) PSubscribeLow(callback func(err error, topic string, 
 		}
 	}()
 
-	callback(ErrUnSubscribe, "", nil)
+	callback(ErrUnSubscribe, "", 0, nil)
 }
 
 // SyncSubscribeWithoutTimeout 从指定topic订阅消息（使用 pubsub.Channel）, 无超时机制.
@@ -927,18 +931,19 @@ func (that *KRedisCluster) PSubscribeLow(callback func(err error, topic string, 
 // 如需错误对外可见以配合外部重连逻辑, 请改用 SyncSubscribeReceive.
 //
 // callback为接收消息的回调函数; topics为需要订阅的topic
-func (that *KRedisCluster) SyncSubscribeWithoutTimeout(callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) SyncSubscribeWithoutTimeout(callback RedisMessageRecvFunc, topics ...string) {
 	pubsub := that.Client.Subscribe(that.ctx.Context(), topics...)
 	ch := pubsub.Channel(redisHd.WithChannelSize(100), redisHd.WithChannelHealthCheckInterval(time.Second*30))
 forEnd: //这个标签
 	for {
 		select {
 		case message, ok := <-ch:
+			now := time.Now().UnixMilli()
 			if !ok {
-				callback(ErrChannelClosed, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+				callback(ErrChannelClosed, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 				goto END
 			} else {
-				callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+				callback(nil, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 			}
 		case <-that.ctx.Context().Done():
 			break forEnd
@@ -948,11 +953,12 @@ forEnd: //这个标签
 	pubsub.Close()
 	// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 	for msg := range ch {
-		callback(nil, msg.Channel, msg.Payload)
+		now := time.Now().UnixMilli()
+		callback(nil, msg.Channel, now, msg.Payload)
 	}
 
 END:
-	callback(ErrUnSubscribe, "", nil)
+	callback(ErrUnSubscribe, "", 0, nil)
 }
 
 // SubscribeWithoutTimeout 从指定topic订阅消息（使用 pubsub.Channel）, 无超时机制, 异步版本.
@@ -963,7 +969,7 @@ END:
 // 如需错误对外可见以配合外部重连逻辑, 请改用 SubscribeReceive.
 //
 // callback为接收消息的回调函数; topics为需要订阅的topic
-func (that *KRedisCluster) SubscribeWithoutTimeout(callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) SubscribeWithoutTimeout(callback RedisMessageRecvFunc, topics ...string) {
 	go func() {
 		pubsub := that.Client.Subscribe(that.ctx.Context(), topics...)
 		ch := pubsub.Channel(redisHd.WithChannelSize(100), redisHd.WithChannelHealthCheckInterval(time.Second*30))
@@ -971,11 +977,12 @@ func (that *KRedisCluster) SubscribeWithoutTimeout(callback func(err error, topi
 		for {
 			select {
 			case message, ok := <-ch:
+				now := time.Now().UnixMilli()
 				if !ok {
-					go callback(ErrChannelClosed, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+					go callback(ErrChannelClosed, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 					goto END
 				} else {
-					go callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+					go callback(nil, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 				}
 			case <-that.ctx.Context().Done():
 				break forEnd
@@ -985,11 +992,12 @@ func (that *KRedisCluster) SubscribeWithoutTimeout(callback func(err error, topi
 		pubsub.Close()
 		// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 		for msg := range ch {
-			callback(nil, msg.Channel, msg.Payload)
+			now := time.Now().UnixMilli()
+			callback(nil, msg.Channel, now, msg.Payload)
 		}
 
 	END:
-		callback(ErrUnSubscribe, "", nil)
+		callback(ErrUnSubscribe, "", 0, nil)
 	}()
 }
 
@@ -1001,7 +1009,7 @@ func (that *KRedisCluster) SubscribeWithoutTimeout(callback func(err error, topi
 // 如需错误对外可见以配合外部重连逻辑, 请改用 SyncSubscribeReceive.
 //
 // timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
-func (that *KRedisCluster) SyncSubscribe(timeout int, callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) SyncSubscribe(timeout int, callback RedisMessageRecvFunc, topics ...string) {
 	pubsub := that.Client.Subscribe(that.ctx.Context(), topics...)
 	// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
 	ch := pubsub.Channel(redisHd.WithChannelSize(100), redisHd.WithChannelHealthCheckInterval(time.Second*30))
@@ -1009,11 +1017,12 @@ forEnd: //这个标签
 	for {
 		select {
 		case message, ok := <-ch:
+			now := time.Now().UnixMilli()
 			if !ok {
-				callback(ErrChannelClosed, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+				callback(ErrChannelClosed, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 				goto END
 			} else {
-				callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+				callback(nil, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 			}
 		case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞, 那么select也会检测其他case条件, 检测到后timeout指定毫秒超时
 			continue
@@ -1025,11 +1034,12 @@ forEnd: //这个标签
 	pubsub.Close()
 	// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 	for msg := range ch {
-		callback(nil, msg.Channel, msg.Payload)
+		now := time.Now().UnixMilli()
+		callback(nil, msg.Channel, now, msg.Payload)
 	}
 
 END:
-	callback(ErrUnSubscribe, "", nil)
+	callback(ErrUnSubscribe, "", 0, nil)
 }
 
 // Subscribe 从指定topic订阅消息（使用 pubsub.Channel）, 异步版本.
@@ -1040,7 +1050,7 @@ END:
 // 如需错误对外可见以配合外部重连逻辑, 请改用 SubscribeReceive.
 //
 // timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
-func (that *KRedisCluster) Subscribe(timeout int, callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) Subscribe(timeout int, callback RedisMessageRecvFunc, topics ...string) {
 	go func() {
 		pubsub := that.Client.Subscribe(that.ctx.Context(), topics...)
 		// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
@@ -1049,11 +1059,12 @@ func (that *KRedisCluster) Subscribe(timeout int, callback func(err error, topic
 		for {
 			select {
 			case message, ok := <-ch:
+				now := time.Now().UnixMilli()
 				if !ok {
-					go callback(ErrChannelClosed, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+					go callback(ErrChannelClosed, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 					goto END
 				} else {
-					go callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+					go callback(nil, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 				}
 			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞, 那么select也会检测其他case条件, 检测到后timeout指定毫秒超时
 				continue
@@ -1065,11 +1076,12 @@ func (that *KRedisCluster) Subscribe(timeout int, callback func(err error, topic
 		pubsub.Close()
 		// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 		for msg := range ch {
-			callback(nil, msg.Channel, msg.Payload)
+			now := time.Now().UnixMilli()
+			callback(nil, msg.Channel, now, msg.Payload)
 		}
 
 	END:
-		callback(ErrUnSubscribe, "", nil)
+		callback(ErrUnSubscribe, "", 0, nil)
 	}()
 }
 
@@ -1081,7 +1093,7 @@ func (that *KRedisCluster) Subscribe(timeout int, callback func(err error, topic
 // 如需错误对外可见以配合外部重连逻辑, 请改用 SyncPSubscribeReceive.
 //
 // timeout 设置轮询超时时间, 单位ms; chanSize 最大允许队列大小, 如果< 1, 则为1; callback为接收消息的回调函数; topics为需要订阅的topic
-func (that *KRedisCluster) SyncPSubscribeWithChanSize(timeout int, chanSize int, callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) SyncPSubscribeWithChanSize(timeout int, chanSize int, callback RedisMessageRecvFunc, topics ...string) {
 	pubsub := that.Client.PSubscribe(that.ctx.Context(), topics...)
 	// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
 	if chanSize < 1 {
@@ -1092,11 +1104,12 @@ forEnd: //这个标签
 	for {
 		select {
 		case message, ok := <-ch:
+			now := time.Now().UnixMilli()
 			if !ok {
-				callback(ErrChannelClosed, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+				callback(ErrChannelClosed, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 				goto END
 			} else {
-				callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+				callback(nil, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 			}
 		case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞, 那么select也会检测其他case条件, 检测到后timeout指定毫秒超时
 			continue
@@ -1108,11 +1121,12 @@ forEnd: //这个标签
 	pubsub.Close()
 	// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 	for msg := range ch {
-		callback(nil, msg.Channel, msg.Payload)
+		now := time.Now().UnixMilli()
+		callback(nil, msg.Channel, now, msg.Payload)
 	}
 
 END:
-	callback(ErrUnSubscribe, "", nil)
+	callback(ErrUnSubscribe, "", 0, nil)
 }
 
 // PSubscribeWithChanSize 从指定topic订阅消息（使用 pubsub.Channel）, topic支持通配符, 异步版本.
@@ -1123,7 +1137,7 @@ END:
 // 如需错误对外可见以配合外部重连逻辑, 请改用 PSubscribeReceive.
 //
 // timeout 设置轮询超时时间, 单位ms; chanSize 最大允许队列大小, 如果< 1, 则为1; callback为接收消息的回调函数; topics为需要订阅的topic
-func (that *KRedisCluster) PSubscribeWithChanSize(timeout int, chanSize int, callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) PSubscribeWithChanSize(timeout int, chanSize int, callback RedisMessageRecvFunc, topics ...string) {
 	go func() {
 		pubsub := that.Client.PSubscribe(that.ctx.Context(), topics...)
 		// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
@@ -1135,11 +1149,12 @@ func (that *KRedisCluster) PSubscribeWithChanSize(timeout int, chanSize int, cal
 		for {
 			select {
 			case message, ok := <-ch:
+				now := time.Now().UnixMilli()
 				if !ok {
-					go callback(ErrChannelClosed, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+					go callback(ErrChannelClosed, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 					goto END
 				} else {
-					go callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+					go callback(nil, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 				}
 			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞, 那么select也会检测其他case条件, 检测到后timeout指定毫秒超时
 				continue
@@ -1151,11 +1166,12 @@ func (that *KRedisCluster) PSubscribeWithChanSize(timeout int, chanSize int, cal
 		pubsub.Close()
 		// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 		for msg := range ch {
-			callback(nil, msg.Channel, msg.Payload)
+			now := time.Now().UnixMilli()
+			callback(nil, msg.Channel, now, msg.Payload)
 		}
 
 	END:
-		callback(ErrUnSubscribe, "", nil)
+		callback(ErrUnSubscribe, "", 0, nil)
 	}()
 }
 
@@ -1167,7 +1183,7 @@ func (that *KRedisCluster) PSubscribeWithChanSize(timeout int, chanSize int, cal
 // 如需错误对外可见以配合外部重连逻辑, 请改用 SyncPSubscribeReceive.
 //
 // timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
-func (that *KRedisCluster) SyncPSubscribe(timeout int, callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) SyncPSubscribe(timeout int, callback RedisMessageRecvFunc, topics ...string) {
 	pubsub := that.Client.PSubscribe(that.ctx.Context(), topics...)
 	// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
 	ch := pubsub.Channel(redisHd.WithChannelSize(100), redisHd.WithChannelHealthCheckInterval(time.Second*30))
@@ -1175,11 +1191,12 @@ forEnd: //这个标签
 	for {
 		select {
 		case message, ok := <-ch:
+			now := time.Now().UnixMilli()
 			if !ok {
-				callback(ErrChannelClosed, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+				callback(ErrChannelClosed, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 				goto END
 			} else {
-				callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+				callback(nil, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 			}
 		case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞, 那么select也会检测其他case条件, 检测到后timeout指定毫秒超时
 			continue
@@ -1190,11 +1207,12 @@ forEnd: //这个标签
 	pubsub.Close()
 	// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 	for msg := range ch {
-		callback(nil, msg.Channel, msg.Payload)
+		now := time.Now().UnixMilli()
+		callback(nil, msg.Channel, now, msg.Payload)
 	}
 
 END:
-	callback(ErrUnSubscribe, "", nil)
+	callback(ErrUnSubscribe, "", 0, nil)
 }
 
 // PSubscribe 从指定topic订阅消息（使用 pubsub.Channel）, topic支持通配符, 异步版本.
@@ -1205,7 +1223,7 @@ END:
 // 如需错误对外可见以配合外部重连逻辑, 请改用 PSubscribeReceive.
 //
 // timeout 设置轮询超时时间, 单位ms; callback为接收消息的回调函数; topics为需要订阅的topic
-func (that *KRedisCluster) PSubscribe(timeout int, callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) PSubscribe(timeout int, callback RedisMessageRecvFunc, topics ...string) {
 	go func() {
 		pubsub := that.Client.PSubscribe(that.ctx.Context(), topics...)
 		// pubsub.Unsubscribe(mr.ctx, "xxx") //不关闭订阅的情况下取消订阅
@@ -1214,11 +1232,12 @@ func (that *KRedisCluster) PSubscribe(timeout int, callback func(err error, topi
 		for {
 			select {
 			case message, ok := <-ch:
+				now := time.Now().UnixMilli()
 				if !ok {
-					go callback(ErrChannelClosed, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+					go callback(ErrChannelClosed, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 					goto END
 				} else {
-					go callback(nil, message.Channel, message.Payload) // 开一个协程用于加工收到的消息
+					go callback(nil, message.Channel, now, message.Payload) // 开一个协程用于加工收到的消息
 				}
 			case <-time.After(time.Duration(timeout) * time.Millisecond): //上面的ch如果一直没数据会阻塞, 那么select也会检测其他case条件, 检测到后timeout指定毫秒超时
 				continue
@@ -1229,11 +1248,12 @@ func (that *KRedisCluster) PSubscribe(timeout int, callback func(err error, topi
 		pubsub.Close()
 		// 此时 ch 已经被 close 了, range 会处理完 Buffer 里的数据后自动退出
 		for msg := range ch {
-			callback(nil, msg.Channel, msg.Payload)
+			now := time.Now().UnixMilli()
+			callback(nil, msg.Channel, now, msg.Payload)
 		}
 
 	END:
-		callback(ErrUnSubscribe, "", nil)
+		callback(ErrUnSubscribe, "", 0, nil)
 	}()
 }
 
@@ -1241,7 +1261,7 @@ func (that *KRedisCluster) PSubscribe(timeout int, callback func(err error, topi
 //
 // 与 SyncPSubscribeWithChanSize 不同：Channel() 内部有自动重连机制, 但错误被内部消化；
 // ReceiveMessage 将错误暴露给调用方, 让外层 reconnectLoop 能感知断连并触发重连.
-func (that *KRedisCluster) SyncPSubscribeReceive(callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) SyncPSubscribeReceive(callback RedisMessageRecvFunc, topics ...string) {
 	ctx := that.ctx.Context()
 	pubsub := that.Client.PSubscribe(ctx, topics...)
 	defer pubsub.Close()
@@ -1249,23 +1269,24 @@ func (that *KRedisCluster) SyncPSubscribeReceive(callback func(err error, topic 
 	for {
 		message, err := pubsub.ReceiveMessage(ctx)
 		if err != nil {
-			callback(err, "", nil)
+			callback(err, "", 0, nil)
 
 			select {
 			case <-ctx.Done():
-				callback(ErrUnSubscribe, "", nil)
+				callback(ErrUnSubscribe, "", 0, nil)
 				return
 			default:
 				return
 			}
 		}
-		callback(nil, message.Channel, message.Payload)
+		now := time.Now().UnixMilli()
+		callback(nil, message.Channel, now, message.Payload)
 	}
 }
 
 // PSubscribeReceive 异步版本 SyncPSubscribeReceive, 使用 ReceiveMessage 从指定 topic 订阅消息.
 // 连接断开时返回错误并退出, 适用于需要用户自行实现自动重连的场景.
-func (that *KRedisCluster) PSubscribeReceive(callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) PSubscribeReceive(callback RedisMessageRecvFunc, topics ...string) {
 	go that.SyncPSubscribeReceive(callback, topics...)
 }
 
@@ -1273,7 +1294,7 @@ func (that *KRedisCluster) PSubscribeReceive(callback func(err error, topic stri
 //
 // 与 SyncSubscribe 不同：Channel() 内部有自动重连机制, 但错误被内部消化；
 // ReceiveMessage 将错误暴露给调用方, 让外层 reconnectLoop 能感知断连并触发重连.
-func (that *KRedisCluster) SyncSubscribeReceive(callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) SyncSubscribeReceive(callback RedisMessageRecvFunc, topics ...string) {
 	ctx := that.ctx.Context()
 	pubsub := that.Client.Subscribe(ctx, topics...)
 	defer pubsub.Close()
@@ -1281,23 +1302,25 @@ func (that *KRedisCluster) SyncSubscribeReceive(callback func(err error, topic s
 	for {
 		message, err := pubsub.ReceiveMessage(ctx)
 		if err != nil {
-			callback(err, "", nil)
+			callback(err, "", 0, nil)
 
 			select {
 			case <-ctx.Done():
-				callback(ErrUnSubscribe, "", nil)
+				callback(ErrUnSubscribe, "", 0, nil)
 				return
 			default:
 				return
 			}
 		}
-		callback(nil, message.Channel, message.Payload)
+
+		now := time.Now().UnixMilli()
+		callback(nil, message.Channel, now, message.Payload)
 	}
 }
 
 // SubscribeReceive 异步版本 SyncSubscribeReceive, 使用 ReceiveMessage 从指定 topic 订阅消息.
 // 连接断开时返回错误并退出, 适用于需要用户自行实现自动重连的场景.
-func (that *KRedisCluster) SubscribeReceive(callback func(err error, topic string, payload any), topics ...string) {
+func (that *KRedisCluster) SubscribeReceive(callback RedisMessageRecvFunc, topics ...string) {
 	go that.SyncSubscribeReceive(callback, topics...)
 }
 
